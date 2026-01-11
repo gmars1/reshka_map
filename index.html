@@ -176,7 +176,9 @@ function extractLocations(cells) {
             .map(l => l.replace(/[\[\]]/g, "").split("|").pop().trim())
             .filter(name =>
                 name.length > 1 &&
-                !/^(Файл|File|Image|Категория):/i.test(name)
+                !/^(Файл|File|Image|Категория):/i.test(name) &&
+                !/^\d+\s*px$/i.test(name) &&
+                !name.toLowerCase().includes("px")
             );
 
         if (names.length === 0) return;
