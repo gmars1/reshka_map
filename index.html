@@ -51,29 +51,37 @@
             const episodes = [];
         
             lines.forEach(line => {
-                // Ищем строки с данными (начинаются с | , но не |- и не |})
                 if (line.startsWith('|') && !line.startsWith('|-') && !line.startsWith('| }')) {
-                    
-                    // Разбиваем строку на ячейки по ||
                     const cells = line.split('||');
                     
                     if (cells.length > 1) {
-                        // 1. Извлекаем ИНДЕКС (первая ячейка)
-                        // Убираем лишние пайпы | и жирный шрифт '''
+                        // 1. Индекс
                         let index = cells[0].replace(/\|/g, '').replace(/'''/g, '').trim();
         
-                        // 2. Извлекаем ГОРОД (вторая ячейка)
+                        // 2. Город и Страна
                         const cityCell = cells[1].trim();
-                        const cityMatch = cityCell.match(/\[\[([^|\]]+)(?:\|[^\]]+)?\]\]/g);
+                        // Находим все вхождения [[...]], исключая файлы картинок
+                        const allLinks = cityCell.match(/\[\[([^|\]]+)(?:\|[^\]]+)?\]\]/g) || [];
                         
-                        if (cityMatch) {
-                            // Берем последний элемент в скобках, чтобы пропустить файлы/флаги
-                            const lastMatch = cityMatch[cityMatch.length - 1];
-                            const cityName = lastMatch.replace(/[\[\]]/g, '').split('|')[0];
-                            
+                        // Фильтруем ссылки, чтобы убрать возможные [[Файл:...]]
+                        const cleanLinks = allLinks.filter(link => !link.toLowerCase().includes('[[файл:'));
+        
+                        let locationText = "";
+        
+                        if (cleanLinks.length >= 2) {
+                            // Если есть флаг страны, то обычно формат: {{Флаг|Страна}} [[Страна]] [[Город]]
+                            const country = cleanLinks[0].replace(/[\[\]]/g, '').split('|')[0];
+                            const city = cleanLinks[1].replace(/[\[\]]/g, '').split('|')[0];
+                            locationText = `${country}, ${city}`;
+                        } else if (cleanLinks.length === 1) {
+                            // Если ссылка только одна
+                            locationText = cleanLinks[0].replace(/[\[\]]/g, '').split('|')[0];
+                        }
+        
+                        if (locationText) {
                             episodes.push({
                                 idx: index,
-                                city: cityName
+                                location: locationText
                             });
                         }
                     }
@@ -82,9 +90,8 @@
         
             statusEl.innerText = `Найдено выпусков: ${episodes.length}`;
             
-            // Выводим в формате: "13 (45). Шри-Ланка"
             outputEl.innerHTML = '<ul style="list-style: none; padding: 0;">' + 
-                episodes.map(item => `<li><strong>${item.idx}.</strong> ${item.city}</li>`).join('') + 
+                episodes.map(item => `<li><strong>${item.idx}.</strong> ${item.location}</li>`).join('') + 
                 '</ul>';
         }
 
