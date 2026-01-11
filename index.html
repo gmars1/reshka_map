@@ -65,75 +65,77 @@
                 console.error(error);
             }
         }
-
+        
         function parseAndDisplay(mediaWiki) {
-            // 1. Разбиваем на блоки по заголовкам сезонов (=== Название ===)
             const seasonBlocks = mediaWiki.split(/^===\s*(.+?)\s*===/m);
             const episodes = [];
-
+        
             for (let i = 1; i < seasonBlocks.length; i += 2) {
                 const seasonName = seasonBlocks[i].trim();
-                const seasonContent = seasonBlocks[i + 1];
-
-                // 2. Ищем таблицы внутри блока сезона
-                const tables = seasonContent.match(/\{\|[\s\S]*?\|\}/g) || [];
-
+                const tables = seasonBlocks[i + 1].match(/\{\|[\s\S]*?\|\}/g) || [];
+        
                 tables.forEach(table => {
-                    const rows = table.split(/\n\|-/);
-
-                    rows.forEach(row => {
-                        const cleanRow = row.trim();
-                        if (!cleanRow || cleanRow.startsWith('!') || cleanRow.includes('|}')) return;
-
-                        const cells = cleanRow.split(/\|\||(?<=\n)\|/).map(c => c.trim()).filter(c => c !== "");
-                        
-                        if (cells.length >= 1) {
-                            // 3. Улучшенный парсинг индекса
+                    table.split(/\n\|-/).forEach(row => {
+                        try {
+                            const cleanRow = row.trim();
+                            if (!cleanRow || cleanRow.startsWith('!') || cleanRow.includes('|}')) return;
+        
+                            const cells = cleanRow.split(/\|\||(?<=\n)\|/).map(c => c.trim()).filter(c => c !== "");
+                            if (cells.length < 2) return;
+        
+                            // 1. Извлекаем индекс и валидируем его
                             const indexMatch = cells.join(' ').match(/'''([^']+)'''/);
-                            const index = indexMatch ? indexMatch[1].trim() : null;
-                            if (!index) return;
-
+                            if (!indexMatch) throw new Error("Индекс не найден");
+                            const index = indexMatch[1].trim();
+        
                             let locations = [];
                             cells.forEach(cell => {
-                                // 1. Извлекаем флаги и чистим их от технических пометок
+                                // Собираем флаги
                                 const flags = [...cell.matchAll(/\{\{[Фф]лаг\|([^}|]+)/gi)]
-                                    .map(m => m[1].trim())
-                                    .filter(f => !f.toLowerCase().includes('px') && !f.includes(':'));
-                                
-                                // 2. Ищем ссылки на локации
+                                    .map(m => m[1].split('(')[0].trim());
+        
+                                // Ищем ссылки
                                 const links = cell.match(/\[\[([^|\]]+)(?:\|[^\]]+)?\]\]/g) || [];
-                                
+                                let cellLocations = [];
+        
                                 links.forEach(link => {
                                     const cityName = link.replace(/[\[\]]/g, '').split('|').pop().trim();
-                                    
-                                    // Полный игнор технических ссылок и мусора
-                                    if (cityName.length < 2 || 
-                                        /^(Файл|File|Image|Категория):/i.test(cityName) || 
-                                        cityName.toLowerCase().includes('px')) return;
-                            
-                                    // 3. Формируем префикс страны, исключая из него название самого города
-                                    // (чтобы не было "Барселона: Барселона")
-                                    const filteredCountries = flags.filter(f => 
-                                        f.toLowerCase() !== cityName.toLowerCase()
-                                    );
-                                    
+        
+                                    // ВАЛИДАЦИЯ: Если в названии города есть технический мусор - выбрасываем ошибку
+                                    if (cityName.toLowerCase().includes('px') || 
+                                        cityName.toLowerCase().includes('файл:') || 
+                                        cityName.toLowerCase().includes('file:') ||
+                                        cityName.length < 2) {
+                                        throw new Error(`Невалидное название локации: ${cityName}`);
+                                    }
+                                    cellLocations.push(cityName);
+                                });
+        
+                                if (cellLocations.length > 0) {
+                                    const primaryCity = cellLocations[0];
+                                    const filteredCountries = flags.filter(f => f.toLowerCase() !== primaryCity.toLowerCase());
                                     const countryPrefix = [...new Set(filteredCountries)].join('/');
                                     
-                                    let fullLoc = countryPrefix ? `${countryPrefix}: ${cityName}` : cityName;
-                                    
-                                    if (!locations.includes(fullLoc)) {
-                                        locations.push(fullLoc);
-                                    }
-                                });
+                                    let locationName = cellLocations.length > 1 
+                                        ? `${primaryCity} (${cellLocations.slice(1).join(', ')})` 
+                                        : primaryCity;
+        
+                                    locations.push(countryPrefix ? `${countryPrefix}: ${locationName}` : locationName);
+                                }
                             });
-
-                            if (locations.length > 0) {
-                                episodes.push({
-                                    season: seasonName,
-                                    idx: index,
-                                    location: locations.join('; ')
-                                });
-                            }
+        
+                            // Итоговая проверка: если локаций не найдено, строка невалидна
+                            if (locations.length === 0) throw new Error("Локации не найдены");
+        
+                            episodes.push({
+                                season: seasonName,
+                                idx: index,
+                                location: locations.join('; ')
+                            });
+        
+                        } catch (e) {
+                            // Консоль покажет, какая именно строка не прошла валидацию
+                            console.warn(`Пропущена строка из-за ошибки: ${e.message}`);
                         }
                     });
                 });
@@ -141,6 +143,7 @@
             renderUI(episodes);
         }
 
+        
         function renderUI(episodes) {
             if (episodes.length === 0) {
                 statusEl.innerText = "⚠ Данные не найдены или формат таблиц изменился.";
