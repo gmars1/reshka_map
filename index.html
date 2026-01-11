@@ -26,21 +26,41 @@
                 });
         
             try {
-                const response = await fetch(apiUrl);
-                if (!response.ok) throw new Error(`Ошибка сети: ${response.status}`);
-        
                 const data = await response.json();
-                
+        
                 if (data.parse && data.parse.wikitext) {
                     const rawText = data.parse.wikitext["*"];
                     
-                    statusEl.innerText = "Данные получены через API!";
-                    statusEl.style.color = "green";
+                    // Разделяем текст на строки
+                    const lines = rawText.split('\n');
+                    const episodes = [];
+        
+                    lines.forEach(line => {
+                        // Ищем строки, начинающиеся с "|", но не заголовочные "|-" или "!"
+                        if (line.startsWith('|') && !line.startsWith('|-') && !line.startsWith('!')) {
+                            
+                            // Разбиваем строку по разделителю ячеек "||"
+                            const cells = line.split('||');
+                            
+                            if (cells.length > 1) {
+                                // Вторая ячейка (индекс 1) обычно содержит город
+                                const cityCell = cells[1].trim();
+                                
+                                // Извлекаем название города из [[Вики-ссылки]]
+                                // Регулярка ищет текст внутри [[...]]
+                                const cityMatch = cityCell.match(/\[\[([^|\]]+)(?:\|[^\]]+)?\]\]/);
+                                
+                                if (cityMatch) {
+                                    episodes.push(cityMatch[1]);
+                                }
+                            }
+                        }
+                    });
+        
+                    // Выводим результат в виде списка
+                    statusEl.innerText = `Найдено выпусков: ${episodes.length}`;
+                    outputEl.innerHTML = '<ol>' + episodes.map(city => `<li>${city}</li>`).join('') + '</ol>';
                     
-                    // Выводим результат
-                    outputEl.innerText = rawText;
-                } else {
-                    throw new Error("Не удалось найти текст секции в ответе API");
                 }
         
             } catch (error) {
@@ -54,4 +74,7 @@
     </script>
 </body>
 </html>
+
+
+
 
