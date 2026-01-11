@@ -49,28 +49,43 @@
         function parseAndDisplay(mediaWiki) {
             const lines = mediaWiki.split('\n');
             const episodes = [];
-
+        
             lines.forEach(line => {
-                // Фильтруем строки таблицы
-                if (line.startsWith('|') && !line.startsWith('|-') && !line.startsWith('!')) {
+                // Ищем строки с данными (начинаются с | , но не |- и не |})
+                if (line.startsWith('|') && !line.startsWith('|-') && !line.startsWith('| }')) {
+                    
+                    // Разбиваем строку на ячейки по ||
                     const cells = line.split('||');
+                    
                     if (cells.length > 1) {
+                        // 1. Извлекаем ИНДЕКС (первая ячейка)
+                        // Убираем лишние пайпы | и жирный шрифт '''
+                        let index = cells[0].replace(/\|/g, '').replace(/'''/g, '').trim();
+        
+                        // 2. Извлекаем ГОРОД (вторая ячейка)
                         const cityCell = cells[1].trim();
-                        // Улучшенная регулярка, чтобы игнорировать флаги и файлы
                         const cityMatch = cityCell.match(/\[\[([^|\]]+)(?:\|[^\]]+)?\]\]/g);
                         
                         if (cityMatch) {
-                            // Берем последний найденный элемент в квадратных скобках (обычно это город после флага)
+                            // Берем последний элемент в скобках, чтобы пропустить файлы/флаги
                             const lastMatch = cityMatch[cityMatch.length - 1];
                             const cityName = lastMatch.replace(/[\[\]]/g, '').split('|')[0];
-                            episodes.push(cityName);
+                            
+                            episodes.push({
+                                idx: index,
+                                city: cityName
+                            });
                         }
                     }
                 }
             });
-
+        
             statusEl.innerText = `Найдено выпусков: ${episodes.length}`;
-            outputEl.innerHTML = '<ol>' + episodes.map(city => `<li>${city}</li>`).join('') + '</ol>';
+            
+            // Выводим в формате: "13 (45). Шри-Ланка"
+            outputEl.innerHTML = '<ul style="list-style: none; padding: 0;">' + 
+                episodes.map(item => `<li><strong>${item.idx}.</strong> ${item.city}</li>`).join('') + 
+                '</ul>';
         }
 
         // Запуск
