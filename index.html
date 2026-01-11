@@ -7,77 +7,74 @@
 <body>
     <h1>Данные «Орел и Решка»</h1>
     <div id="status">Загрузка...</div>
-    <pre id="output" style="white-space: pre-wrap; background: #f4f4f4; padding: 10px;"></pre>
+    <div id="output"></div>
 
     <script>
+        const statusEl = document.getElementById('status');
+        const outputEl = document.getElementById('output');
+
+        async function init() {
+            const rawText = await fetchData();
+            if (rawText) {
+                parseAndDisplay(rawText);
+            }
+        }
+
         async function fetchData() {
-            const statusEl = document.getElementById('status');
-            const outputEl = document.getElementById('output');
-        
-            // Используем API напрямую. origin=* — это ключ к успеху для CORS на GitHub Pages
             const apiUrl = "https://cyclowiki.org/w/api.php?" + 
                 new URLSearchParams({
                     action: "parse",
                     page: "Выпуски_телепередачи_«Орёл_и_решка»",
                     section: "2",
-                    prop: "wikitext", // получаем чистый текст, а не HTML
+                    prop: "wikitext",
                     format: "json",
-                    origin: "*" // Важнейший параметр для обхода CORS
+                    origin: "*" 
                 });
-        
+
             try {
                 const response = await fetch(apiUrl);
                 if (!response.ok) throw new Error(`Ошибка сети: ${response.status}`);
                 
                 const data = await response.json();
-        
                 if (data.parse && data.parse.wikitext) {
-                    const rawText = data.parse.wikitext["*"];
-                    
-                    // Разделяем текст на строки
-                    const lines = rawText.split('\n');
-                    const episodes = [];
-        
-                    lines.forEach(line => {
-                        // Ищем строки, начинающиеся с "|", но не заголовочные "|-" или "!"
-                        if (line.startsWith('|') && !line.startsWith('|-') && !line.startsWith('!')) {
-                            
-                            // Разбиваем строку по разделителю ячеек "||"
-                            const cells = line.split('||');
-                            
-                            if (cells.length > 1) {
-                                // Вторая ячейка (индекс 1) обычно содержит город
-                                const cityCell = cells[1].trim();
-                                
-                                // Извлекаем название города из [[Вики-ссылки]]
-                                // Регулярка ищет текст внутри [[...]]
-                                const cityMatch = cityCell.match(/\[\[([^|\]]+)(?:\|[^\]]+)?\]\]/);
-                                
-                                if (cityMatch) {
-                                    episodes.push(cityMatch[1]);
-                                }
-                            }
-                        }
-                    });
-        
-                    // Выводим результат в виде списка
-                    statusEl.innerText = `Найдено выпусков: ${episodes.length}`;
-                    outputEl.innerHTML = '<ol>' + episodes.map(city => `<li>${city}</li>`).join('') + '</ol>';
-                    
+                    return data.parse.wikitext["*"];
                 }
-        
             } catch (error) {
                 statusEl.innerText = "❌ Ошибка: " + error.message;
                 statusEl.style.color = "red";
                 console.error(error);
             }
         }
-        
-        fetchData();
+
+        function parseAndDisplay(mediaWiki) {
+            const lines = mediaWiki.split('\n');
+            const episodes = [];
+
+            lines.forEach(line => {
+                // Фильтруем строки таблицы
+                if (line.startsWith('|') && !line.startsWith('|-') && !line.startsWith('!')) {
+                    const cells = line.split('||');
+                    if (cells.length > 1) {
+                        const cityCell = cells[1].trim();
+                        // Улучшенная регулярка, чтобы игнорировать флаги и файлы
+                        const cityMatch = cityCell.match(/\[\[([^|\]]+)(?:\|[^\]]+)?\]\]/g);
+                        
+                        if (cityMatch) {
+                            // Берем последний найденный элемент в квадратных скобках (обычно это город после флага)
+                            const lastMatch = cityMatch[cityMatch.length - 1];
+                            const cityName = lastMatch.replace(/[\[\]]/g, '').split('|')[0];
+                            episodes.push(cityName);
+                        }
+                    }
+                }
+            });
+
+            statusEl.innerText = `Найдено выпусков: ${episodes.length}`;
+            outputEl.innerHTML = '<ol>' + episodes.map(city => `<li>${city}</li>`).join('') + '</ol>';
+        }
+
+        // Запуск
+        init();
     </script>
 </body>
 </html>
-
-
-
-
