@@ -8,14 +8,7 @@
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
-<footer class="license">
-    Данные получены автоматически через MediaWiki API.<br>
-    Источник: 
-    <a href="https://cyclowiki.org/wiki/Выпуски_телепередачи_«Орёл_и_решка»" target="_blank">
-        Cyclowiki
-    </a><br>
-    Лицензии: GFDL, CC BY-SA 4.0
-</footer>
+
 
 <!--
 Данные получены из Cyclowiki:
@@ -70,6 +63,22 @@ html, body {
     max-height: 200px;
     overflow: auto;
 }
+
+footer.license {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    font-size: 11px;
+    color: #444;
+    background: rgba(255,255,255,0.92);
+    padding: 8px 12px;
+    border-radius: 10px;
+    text-align: center;
+    z-index: 1000;
+    box-shadow: 0 6px 16px rgba(0,0,0,.15);
+}
+    
 .ok { color: #2e7d32; }
 .err { color: #d32f2f; }
 </style>
@@ -84,6 +93,8 @@ html, body {
     <div id="status">⏳ Загрузка данных…</div>
     <div id="log" class="log"></div>
 </div>
+
+
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -665,6 +676,37 @@ const geoDict = {
 
 
 </script>
+
+<footer class="license">
+    <div>
+        Данные выпусков получены автоматически через MediaWiki API<br>
+        Источник: 
+        <a href="https://cyclowiki.org/wiki/Выпуски_телепередачи_«Орёл_и_решка»"
+           target="_blank" rel="noopener">
+            Cyclowiki
+        </a><br>
+        Лицензии контента: GFDL, 
+        <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">
+            CC BY-SA 4.0
+        </a>
+    </div>
+
+    <div style="margin-top:6px">
+        Карта: © 
+        <a href="https://www.openstreetmap.org/copyright" target="_blank">
+            OpenStreetMap
+        </a> contributors<br>
+        Геокодирование: 
+        <a href="https://nominatim.openstreetmap.org/" target="_blank">
+            Nominatim
+        </a>
+    </div>
+
+    <div style="margin-top:6px; font-size:10px; opacity:.7">
+        Проект не является официальным сайтом телепередачи
+    </div>
+</footer>
+
 
 </body>
 </html>
