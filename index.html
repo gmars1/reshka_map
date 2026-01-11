@@ -47,50 +47,53 @@
         }
 
         function parseAndDisplay(mediaWiki) {
-            const lines = mediaWiki.split('\n');
+            const rows = mediaWiki.split(/\|-/);
             const episodes = [];
         
-            lines.forEach(line => {
-                if (line.startsWith('|') && !line.startsWith('|-') && !line.startsWith('| }')) {
-                    const cells = line.split('||');
+            rows.forEach(row => {
+                const cleanRow = row.trim();
+                if (!cleanRow || cleanRow.startsWith('!')) return;
+        
+                // Разбиваем по ячейкам (учтем, что в начале строки тоже может быть |)
+                const cells = cleanRow.split(/\|\||(?<=\n)\|/).map(c => c.trim()).filter(c => c !== "");
+                
+                if (cells.length >= 1) {
+                    // 1. Ищем Индекс. Обычно это первая ячейка, где есть цифры в кавычках '''1 (1)'''
+                    let indexCell = cells.find(c => c.match(/'''\d+/)) || cells[0];
+                    let index = indexCell.replace(/\|/g, '').replace(/'''/g, '').trim();
+        
+                    // 2. Ищем локации во всех ячейках (на случай списков)
+                    let locations = [];
                     
-                    if (cells.length > 1) {
-                        // 1. Индекс
-                        let index = cells[0].replace(/\|/g, '').replace(/'''/g, '').trim();
+                    cells.forEach(cell => {
+                        // Ищем все конструкции [[...]], исключая файлы
+                        const matches = cell.match(/\[\[([^|\]]+)(?:\|[^\]]+)?\]\]/g) || [];
+                        matches.forEach(m => {
+                            if (!m.toLowerCase().includes('[[файл:')) {
+                                const cityName = m.replace(/[\[\]]/g, '').split('|').pop();
+                                // Ищем страну рядом (шаблон Флаг)
+                                const flagMatch = cell.match(new RegExp(`\\{\\{Флаг\\|([^}|]+)\\}\\}\\s*\\Q${m}\\E`.replace('\\Q', '').replace('\\E', ''))) 
+                                                  || cell.match(/\{\{Флаг\|([^}|]+)\}\}/);
+                                const countryName = flagMatch ? flagMatch[1].trim() : "";
+                                
+                                let fullLoc = (countryName && countryName !== cityName) ? `${countryName}, ${cityName}` : cityName;
+                                if (!locations.includes(fullLoc)) locations.push(fullLoc);
+                            }
+                        });
+                    });
         
-                        // 2. Локация (вторая ячейка)
-                        const cityCell = cells[1].trim();
-        
-                        // Ищем страну внутри {{Флаг|Название}}
-                        const flagMatch = cityCell.match(/\{\{Флаг\|([^}|]+)/);
-                        const country = flagMatch ? flagMatch[1].trim() : null;
-        
-                        // Ищем город внутри [[Город]] (берем последний, если их несколько)
-                        const cityLinks = cityCell.match(/\[\[([^|\]]+)(?:\|[^\]]+)?\]\]/g) || [];
-                        const cleanCityLinks = cityLinks.filter(link => !link.toLowerCase().includes('[[файл:'));
-                        
-                        let cityName = null;
-                        if (cleanCityLinks.length > 0) {
-                            const lastMatch = cleanCityLinks[cleanCityLinks.length - 1];
-                            cityName = lastMatch.replace(/[\[\]]/g, '').split('|')[0];
-                        }
-        
-                        // Формируем итоговую строку
-                        let locationText = "";
-                        if (country && cityName && country !== cityName) {
-                            locationText = `${country}, ${cityName}`;
-                        } else {
-                            locationText = cityName || country || "Неизвестно";
-                        }
-        
-                        episodes.push({ idx: index, location: locationText });
+                    if (locations.length > 0) {
+                        episodes.push({
+                            idx: index,
+                            location: locations.join('; ') // Если городов несколько, пишем через ;
+                        });
                     }
                 }
             });
         
-            statusEl.innerText = `Найдено выпусков: ${episodes.length}`;
+            statusEl.innerText = `Найдено записей: ${episodes.length}`;
             outputEl.innerHTML = '<ul style="list-style: none; padding: 0;">' + 
-                episodes.map(item => `<li><strong>${item.idx}.</strong> ${item.location}</li>`).join('') + 
+                episodes.map(item => `<li style="margin-bottom: 8px;"><strong>${item.idx}.</strong> ${item.location}</li>`).join('') + 
                 '</ul>';
         }
 
