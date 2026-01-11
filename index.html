@@ -26,6 +26,9 @@
                 });
         
             try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error(`Ошибка сети: ${response.status}`);
+                
                 const data = await response.json();
         
                 if (data.parse && data.parse.wikitext) {
