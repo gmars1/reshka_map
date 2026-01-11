@@ -11,45 +11,50 @@
 
     <script>
         async function fetchData() {
-          const targetUrl = 'https://cyclowiki.org/w/index.php?title=%D0%92%D1%8B%D0%BF%D1%83%D1%81%D0%BA%D0%B8_%D1%82%D0%B5%D0%BB%D0%B5%D0%BF%D0%B5%D1%80%D0%B5%D0%B4%D0%B0%D1%87%D0%B8_%C2%AB%D0%9E%D1%80%D1%91%D0%BB_%D0%B8_%D1%80%D0%B5%D1%88%D0%BA%D0%B0%C2%BB&action=edit&section=2';
-          
-          // Используем https версию прокси
-          const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
-
-          console.log(proxyUrl);
-      
-          try {
-              const response = await fetch(proxyUrl);
-              const data = await response.json();
-              
-              const parser = new DOMParser();
-              const doc = parser.parseFromString(data.contents, 'text/html');
-              const wikiText = doc.querySelector('#wpTextbox1').value;
-      
-              // Простой парсинг: ищем строки, начинающиеся с "|" (ячейки таблицы)
-              const lines = wikiText.split('\n');
-              const listElement = document.getElementById('output');
-              listElement.innerHTML = ''; // Очищаем
-      
-              lines.forEach(line => {
-                  // Ищем строки с городами (они обычно в скобках [[Город]])
-                  const match = line.match(/\[\[(.*?)\]\]/);
-                  if (match) {
-                      const li = document.createElement('li');
-                      li.textContent = match[1]; // Добавляем название города в список
-                      listElement.appendChild(li);
-                  }
-              });
-      
-              document.getElementById('status').innerText = 'Список городов из выпусков:';
-      
-          } catch (error) {
-              document.getElementById('status').innerText = 'Ошибка загрузки. Попробуйте обновить страницу.';
-              console.error(error);
-          }
-      }
-      
-      fetchData();
+            const statusEl = document.getElementById('status');
+            const outputEl = document.getElementById('output');
+            
+            const targetUrl = 'https://cyclowiki.org/w/index.php?title=%D0%92%D1%8B%D0%BF%D1%83%D1%81%D0%BA%D0%B8_%D1%82%D0%B5%D0%BB%D0%B5%D0%BF%D0%B5%D1%80%D0%B5%D0%B4%D0%B0%D1%87%D0%B8_%C2%AB%D0%9E%D1%80%D1%91%D0%BB_%D0%B8_%D1%80%D0%B5%D1%88%D0%BA%D0%B0%C2%BB&action=edit&section=2';
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+        
+            try {
+                const response = await fetch(proxyUrl);
+        
+                // 1. Проверяем, что сам прокси ответил успешно (код 200-299)
+                if (!response.ok) {
+                    throw new Error(`Ошибка прокси-сервера: ${response.status}`);
+                }
+        
+                const data = await response.json();
+        
+                // 2. AllOrigins может вернуть null в data.contents, если целевой сайт упал
+                if (!data || !data.contents) {
+                    throw new Error('Целевой сайт не отдал данные (пустой ответ)');
+                }
+        
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(data.contents, 'text/html');
+                const wikiField = doc.querySelector('#wpTextbox1');
+        
+                if (!wikiField) {
+                    throw new Error('Не удалось найти Wiki-текст. Возможно, структура страницы изменилась.');
+                }
+        
+                const wikiText = wikiField.value;
+                // ... ваша логика парсинга ...
+                statusEl.innerText = 'Данные успешно загружены!';
+                outputEl.innerText = wikiText.substring(0, 500) + '...'; // Показываем начало текста
+        
+            } catch (error) {
+                // Теперь любая ошибка (500, 404, CORS) попадет сюда
+                statusEl.innerText = '❌ Ошибка: ' + error.message;
+                statusEl.style.color = 'red';
+                console.error('Подробности ошибки:', error);
+            }
+        }
+        
+        fetchData();
     </script>
 </body>
 </html>
+
