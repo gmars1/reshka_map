@@ -2,16 +2,34 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Wiki Data Scraper</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Орел и Решка — Sandbox Explorer</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; color: #333; background-color: #f9f9f9; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        #status { padding: 10px; border-radius: 4px; margin-bottom: 20px; font-weight: bold; }
+        .loading { background: #e1f5fe; color: #0288d1; border: 1px solid #b3e5fc; }
+        .success { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+        .error { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
+        .season-header { background: #34495e; color: white; padding: 8px 15px; margin-top: 30px; border-radius: 4px; font-size: 1.1em; }
+        .episode-row { display: flex; background: white; border-bottom: 1px solid #eee; padding: 10px 15px; transition: background 0.2s; }
+        .episode-row:hover { background: #f1f1f1; }
+        .episode-idx { min-width: 120px; color: #7f8c8d; font-family: monospace; font-size: 0.95em; }
+        .episode-location { flex-grow: 1; font-weight: 500; }
+    </style>
 </head>
 <body>
-    <h1>Данные «Орел и Решка»</h1>
-    <div id="status">Загрузка...</div>
+
+    <h1>Выпуски «Орёл и Решка»</h1>
+    <div id="status" class="loading">⏳ Инициализация загрузки данных...</div>
     <div id="output"></div>
 
     <script>
         const statusEl = document.getElementById('status');
         const outputEl = document.getElementById('output');
+
+        // Основной запуск
+        init();
 
         async function init() {
             const rawText = await fetchData();
@@ -34,71 +52,119 @@
             try {
                 const response = await fetch(apiUrl);
                 if (!response.ok) throw new Error(`Ошибка сети: ${response.status}`);
-                
                 const data = await response.json();
-                if (data.parse && data.parse.wikitext) {
-                    return data.parse.wikitext["*"];
+                
+                if (data?.parse?.wikitext?.['*']) {
+                    return data.parse.wikitext['*'];
+                } else {
+                    throw new Error("Не удалось извлечь текст из ответа API");
                 }
             } catch (error) {
                 statusEl.innerText = "❌ Ошибка: " + error.message;
-                statusEl.style.color = "red";
+                statusEl.className = "error";
                 console.error(error);
             }
         }
 
         function parseAndDisplay(mediaWiki) {
-            const rows = mediaWiki.split(/\|-/);
+            // 1. Разбиваем на блоки по заголовкам сезонов (=== Название ===)
+            const seasonBlocks = mediaWiki.split(/^===\s*(.+?)\s*===/m);
             const episodes = [];
-        
-            rows.forEach(row => {
-                const cleanRow = row.trim();
-                if (!cleanRow || cleanRow.startsWith('!')) return;
-        
-                // Разбиваем по ячейкам (учтем, что в начале строки тоже может быть |)
-                const cells = cleanRow.split(/\|\||(?<=\n)\|/).map(c => c.trim()).filter(c => c !== "");
-                
-                if (cells.length >= 1) {
-                    // 1. Ищем Индекс. Обычно это первая ячейка, где есть цифры в кавычках '''1 (1)'''
-                    let indexCell = cells.find(c => c.match(/'''\d+/)) || cells[0];
-                    let index = indexCell.replace(/\|/g, '').replace(/'''/g, '').trim();
-        
-                    // 2. Ищем локации во всех ячейках (на случай списков)
-                    let locations = [];
-                    
-                    cells.forEach(cell => {
-                        // Ищем все конструкции [[...]], исключая файлы
-                        const matches = cell.match(/\[\[([^|\]]+)(?:\|[^\]]+)?\]\]/g) || [];
-                        matches.forEach(m => {
-                            if (!m.toLowerCase().includes('[[файл:')) {
-                                const cityName = m.replace(/[\[\]]/g, '').split('|').pop();
-                                // Ищем страну рядом (шаблон Флаг)
-                                const flagMatch = cell.match(new RegExp(`\\{\\{Флаг\\|([^}|]+)\\}\\}\\s*\\Q${m}\\E`.replace('\\Q', '').replace('\\E', ''))) 
-                                                  || cell.match(/\{\{Флаг\|([^}|]+)\}\}/);
-                                const countryName = flagMatch ? flagMatch[1].trim() : "";
-                                
-                                let fullLoc = (countryName && countryName !== cityName) ? `${countryName}, ${cityName}` : cityName;
-                                if (!locations.includes(fullLoc)) locations.push(fullLoc);
+
+            for (let i = 1; i < seasonBlocks.length; i += 2) {
+                const seasonName = seasonBlocks[i].trim();
+                const seasonContent = seasonBlocks[i + 1];
+
+                // 2. Ищем таблицы внутри блока сезона
+                const tables = seasonContent.match(/\{\|[\s\S]*?\|\}/g) || [];
+
+                tables.forEach(table => {
+                    const rows = table.split(/\n\|-/);
+
+                    rows.forEach(row => {
+                        const cleanRow = row.trim();
+                        if (!cleanRow || cleanRow.startsWith('!') || cleanRow.includes('|}')) return;
+
+                        const cells = cleanRow.split(/\|\||(?<=\n)\|/).map(c => c.trim()).filter(c => c !== "");
+                        
+                        if (cells.length >= 1) {
+                            // 3. Улучшенный парсинг индекса
+                            const indexMatch = cells.join(' ').match(/'''([^']+)'''/);
+                            const index = indexMatch ? indexMatch[1].trim() : null;
+                            if (!index) return;
+
+                            let locations = [];
+                            cells.forEach(cell => {
+                                // 4. Собираем все флаги в ячейке
+                                const flags = [...cell.matchAll(/\{\{Флаг\|([^}|]+)/g)].map(m => m[1].trim());
+                                const countryPrefix = flags.length > 0 ? flags.join('/') : "";
+
+                                // 5. Ищем ссылки на города
+                                const links = cell.match(/\[\[([^|\]]+)(?:\|[^\]]+)?\]\]/g) || [];
+                                links.forEach(link => {
+                                    const cityName = link.replace(/[\[\]]/g, '').split('|').pop().trim();
+                                    
+                                    if (cityName.length < 2 || /^(Файл|File|Image|Категория):/i.test(cityName)) return;
+
+                                    let fullLoc = (countryPrefix && countryPrefix !== cityName) 
+                                        ? `${countryPrefix}: ${cityName}` 
+                                        : cityName;
+                                    
+                                    if (!locations.includes(fullLoc)) locations.push(fullLoc);
+                                });
+                            });
+
+                            if (locations.length > 0) {
+                                episodes.push({
+                                    season: seasonName,
+                                    idx: index,
+                                    location: locations.join('; ')
+                                });
                             }
-                        });
+                        }
                     });
-        
-                    if (locations.length > 0) {
-                        episodes.push({
-                            idx: index,
-                            location: locations.join('; ') // Если городов несколько, пишем через ;
-                        });
-                    }
-                }
-            });
-        
-            statusEl.innerText = `Найдено записей: ${episodes.length}`;
-            outputEl.innerHTML = '<ul style="list-style: none; padding: 0;">' + 
-                episodes.map(item => `<li style="margin-bottom: 8px;"><strong>${item.idx}.</strong> ${item.location}</li>`).join('') + 
-                '</ul>';
+                });
+            }
+            renderUI(episodes);
         }
 
-        // Запуск
-        init();
+        function renderUI(episodes) {
+            if (episodes.length === 0) {
+                statusEl.innerText = "⚠ Данные не найдены или формат таблиц изменился.";
+                statusEl.className = "error";
+                return;
+            }
+
+            let currentSeason = "";
+            let html = "";
+
+            episodes.forEach(ep => {
+                if (ep.season !== currentSeason) {
+                    currentSeason = ep.season;
+                    html += `<div class="season-header">${escapeHtml(currentSeason)}</div>`;
+                }
+                html += `
+                    <div class="episode-row">
+                        <span class="episode-idx">${escapeHtml(ep.idx)}</span>
+                        <span class="episode-location">${escapeHtml(ep.location)}</span>
+                    </div>`;
+            });
+
+            outputEl.innerHTML = html;
+            statusEl.innerText = `✅ Успешно загружено: ${episodes.length} выпусков`;
+            statusEl.className = "success";
+        }
+
+        function escapeHtml(s) {
+            if (!s) return "";
+            return s.replace(/[&<>"']/g, m => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[m]));
+        }
     </script>
 </body>
 </html>
