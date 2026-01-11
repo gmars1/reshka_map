@@ -1,186 +1,239 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Орел и Решка — Sandbox Explorer</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; color: #333; background-color: #f9f9f9; }
-        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
-        #status { padding: 10px; border-radius: 4px; margin-bottom: 20px; font-weight: bold; }
-        .loading { background: #e1f5fe; color: #0288d1; border: 1px solid #b3e5fc; }
-        .success { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
-        .error { background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; }
-        .season-header { background: #34495e; color: white; padding: 8px 15px; margin-top: 30px; border-radius: 4px; font-size: 1.1em; }
-        .episode-row { display: flex; background: white; border-bottom: 1px solid #eee; padding: 10px 15px; transition: background 0.2s; }
-        .episode-row:hover { background: #f1f1f1; }
-        .episode-idx { min-width: 120px; color: #7f8c8d; font-family: monospace; font-size: 0.95em; }
-        .episode-location { flex-grow: 1; font-weight: 500; }
-    </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Орёл и Решка — Wiki Parser</title>
+
+<style>
+body {
+    font-family: system-ui, -apple-system, sans-serif;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #f0f2f5;
+    color: #1c1e21;
+}
+h1 { text-align: center; color: #1877f2; }
+
+#status {
+    padding: 14px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-weight: 600;
+    text-align: center;
+}
+.loading { background: #e7f3ff; color: #1877f2; }
+.success { background: #e7f4e8; color: #2b7d32; }
+.error   { background: #fbe9e7; color: #d32f2f; }
+
+.season-header {
+    margin-top: 30px;
+    padding: 12px 20px;
+    background: #1c1e21;
+    color: white;
+    border-radius: 8px 8px 0 0;
+    font-size: 1.1em;
+}
+
+.episode-row {
+    display: flex;
+    background: white;
+    padding: 12px 20px;
+    border-bottom: 1px solid #ebedf0;
+}
+.episode-row:last-child {
+    border-radius: 0 0 8px 8px;
+    border-bottom: none;
+}
+
+.episode-idx {
+    min-width: 110px;
+    color: #65676b;
+    font-weight: 600;
+}
+.episode-location {
+    flex: 1;
+}
+</style>
 </head>
+
 <body>
 
-    <h1>Выпуски «Орёл и Решка»</h1>
-    <div id="status" class="loading">⏳ Инициализация загрузки данных...</div>
-    <div id="output"></div>
+<h1>Архив выпусков «Орёл и Решка»</h1>
+<div id="status" class="loading">⏳ Загрузка данных…</div>
+<div id="output"></div>
 
-    <script>
-        const statusEl = document.getElementById('status');
-        const outputEl = document.getElementById('output');
+<script>
+const statusEl = document.getElementById("status");
+const outputEl = document.getElementById("output");
 
-        // Основной запуск
-        init();
+const API_URL =
+    "https://cyclowiki.org/w/api.php?" +
+    new URLSearchParams({
+        action: "parse",
+        page: "Выпуски_телепередачи_«Орёл_и_решка»",
+        section: "2",
+        prop: "wikitext",
+        format: "json",
+        origin: "*"
+    });
 
-        async function init() {
-            const rawText = await fetchData();
-            if (rawText) {
-                parseAndDisplay(rawText);
-            }
+init();
+
+/* ==================== INIT ==================== */
+
+async function init() {
+    try {
+        const wikiText = await fetchWikiText();
+        const episodes = parseWiki(wikiText);
+        renderEpisodes(episodes);
+    } catch (e) {
+        fail(e.message);
+        console.error(e);
+    }
+}
+
+/* ==================== FETCH ==================== */
+
+async function fetchWikiText() {
+    const res = await fetch(API_URL);
+
+    if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+
+    if (!data?.parse?.wikitext?.["*"]) {
+        throw new Error("Некорректный ответ API");
+    }
+
+    return data.parse.wikitext["*"];
+}
+
+/* ==================== PARSE ==================== */
+
+function parseWiki(text) {
+    const episodes = [];
+    const seasonBlocks = text.split(/^===\s*(.+?)\s*===/m);
+
+    for (let i = 1; i < seasonBlocks.length; i += 2) {
+        const season = seasonBlocks[i].trim();
+        const content = seasonBlocks[i + 1];
+        if (!content) continue;
+
+        const tables = content.match(/\{\|[\s\S]*?\|\}/g) || [];
+        tables.forEach(table => parseTable(table, season, episodes));
+    }
+
+    return episodes;
+}
+
+function parseTable(table, season, episodes) {
+    table.split(/\n\|-/).forEach(row => {
+        const clean = row.trim();
+        if (!clean || clean.startsWith("!") || clean.includes("|}")) return;
+
+        const cells = clean
+            .split(/\|\||(?<=\n)\|/)
+            .map(c => c.trim())
+            .filter(Boolean);
+
+        const idx = extractIndex(cells);
+        if (!idx) return;
+
+        const locations = extractLocations(cells);
+        if (locations.length === 0) return;
+
+        episodes.push({
+            season,
+            idx,
+            location: locations.join("; ")
+        });
+    });
+}
+
+/* ==================== EXTRACTORS ==================== */
+
+function extractIndex(cells) {
+    const bold = cells.join(" ").match(/'''([^']+)'''/);
+    if (bold) return bold[1].trim();
+
+    const fallback = cells[0].match(/\d+[\d\s()]+/);
+    return fallback ? fallback[0].trim() : null;
+}
+
+function extractLocations(cells) {
+    const locations = [];
+
+    cells.forEach(cell => {
+        const flags = [...cell.matchAll(/\{\{[Фф]лаг\|([^}|]+)/g)]
+            .map(m => m[1].trim());
+
+        const links = cell.match(/\[\[([^|\]]+)(?:\|[^\]]+)?\]\]/g) || [];
+        const names = links
+            .map(l => l.replace(/[\[\]]/g, "").split("|").pop().trim())
+            .filter(name =>
+                name.length > 1 &&
+                !/^(Файл|File|Image|Категория):/i.test(name)
+            );
+
+        if (names.length === 0) return;
+
+        const city = names[0];
+        const countries = flags.filter(f => f.toLowerCase() !== city.toLowerCase());
+        const prefix = [...new Set(countries)].join("/");
+
+        const label = prefix ? `${prefix}: ${city}` : city;
+        if (!locations.includes(label)) locations.push(label);
+    });
+
+    return locations;
+}
+
+/* ==================== RENDER ==================== */
+
+function renderEpisodes(episodes) {
+    if (episodes.length === 0) {
+        fail("Ничего не найдено");
+        return;
+    }
+
+    let html = "";
+    let currentSeason = "";
+
+    episodes.forEach(ep => {
+        if (ep.season !== currentSeason) {
+            currentSeason = ep.season;
+            html += `<div class="season-header">${escapeHtml(currentSeason)}</div>`;
         }
 
-        async function fetchData() {
-            const apiUrl = "https://cyclowiki.org/w/api.php?" + 
-                new URLSearchParams({
-                    action: "parse",
-                    page: "Выпуски_телепередачи_«Орёл_и_решка»",
-                    section: "2",
-                    prop: "wikitext",
-                    format: "json",
-                    origin: "*" 
-                });
+        html += `
+        <div class="episode-row">
+            <span class="episode-idx">${escapeHtml(ep.idx)}</span>
+            <span class="episode-location">${escapeHtml(ep.location)}</span>
+        </div>`;
+    });
 
-            try {
-                const response = await fetch(apiUrl);
-                if (!response.ok) throw new Error(`Ошибка сети: ${response.status}`);
-                const data = await response.json();
-                
-                if (data?.parse?.wikitext?.['*']) {
-                    return data.parse.wikitext['*'];
-                } else {
-                    throw new Error("Не удалось извлечь текст из ответа API");
-                }
-            } catch (error) {
-                statusEl.innerText = "❌ Ошибка: " + error.message;
-                statusEl.className = "error";
-                console.error(error);
-            }
-        }
-        
-        function parseAndDisplay(mediaWiki) {
-            const seasonBlocks = mediaWiki.split(/^===\s*(.+?)\s*===/m);
-            const episodes = [];
-        
-            for (let i = 1; i < seasonBlocks.length; i += 2) {
-                const seasonName = seasonBlocks[i].trim();
-                const tables = seasonBlocks[i + 1].match(/\{\|[\s\S]*?\|\}/g) || [];
-        
-                tables.forEach(table => {
-                    table.split(/\n\|-/).forEach(row => {
-                        try {
-                            const cleanRow = row.trim();
-                            if (!cleanRow || cleanRow.startsWith('!') || cleanRow.includes('|}')) return;
-        
-                            const cells = cleanRow.split(/\|\||(?<=\n)\|/).map(c => c.trim()).filter(c => c !== "");
-                            if (cells.length < 2) return;
-        
-                            // 1. Извлекаем индекс и валидируем его
-                            const indexMatch = cells.join(' ').match(/'''([^']+)'''/);
-                            if (!indexMatch) throw new Error("Индекс не найден");
-                            const index = indexMatch[1].trim();
-        
-                            let locations = [];
-                            cells.forEach(cell => {
-                                // Собираем флаги
-                                const flags = [...cell.matchAll(/\{\{[Фф]лаг\|([^}|]+)/gi)]
-                                    .map(m => m[1].split('(')[0].trim());
-        
-                                // Ищем ссылки
-                                const links = cell.match(/\[\[([^|\]]+)(?:\|[^\]]+)?\]\]/g) || [];
-                                let cellLocations = [];
-        
-                                links.forEach(link => {
-                                    const cityName = link.replace(/[\[\]]/g, '').split('|').pop().trim();
-        
-                                    // ВАЛИДАЦИЯ: Если в названии города есть технический мусор - выбрасываем ошибку
-                                    if (cityName.toLowerCase().includes('px') || 
-                                        cityName.toLowerCase().includes('файл:') || 
-                                        cityName.toLowerCase().includes('file:') ||
-                                        cityName.length < 2) {
-                                        throw new Error(`Невалидное название локации: ${cityName}`);
-                                    }
-                                    cellLocations.push(cityName);
-                                });
-        
-                                if (cellLocations.length > 0) {
-                                    const primaryCity = cellLocations[0];
-                                    const filteredCountries = flags.filter(f => f.toLowerCase() !== primaryCity.toLowerCase());
-                                    const countryPrefix = [...new Set(filteredCountries)].join('/');
-                                    
-                                    let locationName = cellLocations.length > 1 
-                                        ? `${primaryCity} (${cellLocations.slice(1).join(', ')})` 
-                                        : primaryCity;
-        
-                                    locations.push(countryPrefix ? `${countryPrefix}: ${locationName}` : locationName);
-                                }
-                            });
-        
-                            // Итоговая проверка: если локаций не найдено, строка невалидна
-                            if (locations.length === 0) throw new Error("Локации не найдены");
-        
-                            episodes.push({
-                                season: seasonName,
-                                idx: index,
-                                location: locations.join('; ')
-                            });
-        
-                        } catch (e) {
-                            // Консоль покажет, какая именно строка не прошла валидацию
-                            console.warn(`Пропущена строка из-за ошибки: ${e.message}`);
-                        }
-                    });
-                });
-            }
-            renderUI(episodes);
-        }
+    outputEl.innerHTML = html;
+    statusEl.textContent = `✅ Загружено выпусков: ${episodes.length}`;
+    statusEl.className = "success";
+}
 
-        
-        function renderUI(episodes) {
-            if (episodes.length === 0) {
-                statusEl.innerText = "⚠ Данные не найдены или формат таблиц изменился.";
-                statusEl.className = "error";
-                return;
-            }
+/* ==================== UTILS ==================== */
 
-            let currentSeason = "";
-            let html = "";
+function escapeHtml(str = "") {
+    return str.replace(/[&<>"']/g, m =>
+        ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[m])
+    );
+}
 
-            episodes.forEach(ep => {
-                if (ep.season !== currentSeason) {
-                    currentSeason = ep.season;
-                    html += `<div class="season-header">${escapeHtml(currentSeason)}</div>`;
-                }
-                html += `
-                    <div class="episode-row">
-                        <span class="episode-idx">${escapeHtml(ep.idx)}</span>
-                        <span class="episode-location">${escapeHtml(ep.location)}</span>
-                    </div>`;
-            });
+function fail(msg) {
+    statusEl.textContent = "❌ " + msg;
+    statusEl.className = "error";
+}
+</script>
 
-            outputEl.innerHTML = html;
-            statusEl.innerText = `✅ Успешно загружено: ${episodes.length} выпусков`;
-            statusEl.className = "success";
-        }
-
-        function escapeHtml(s) {
-            if (!s) return "";
-            return s.replace(/[&<>"']/g, m => ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#39;'
-            }[m]));
-        }
-    </script>
 </body>
 </html>
