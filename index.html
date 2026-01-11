@@ -95,22 +95,35 @@
 
                             let locations = [];
                             cells.forEach(cell => {
-                                // 4. Собираем все флаги в ячейке
-                                const flags = [...cell.matchAll(/\{\{Флаг\|([^}|]+)/g)].map(m => m[1].trim());
-                                const countryPrefix = flags.length > 0 ? flags.join('/') : "";
-
-                                // 5. Ищем ссылки на города
+                                // 1. Извлекаем флаги и чистим их от технических пометок
+                                const flags = [...cell.matchAll(/\{\{[Фф]лаг\|([^}|]+)/gi)]
+                                    .map(m => m[1].trim())
+                                    .filter(f => !f.toLowerCase().includes('px') && !f.includes(':'));
+                                
+                                // 2. Ищем ссылки на локации
                                 const links = cell.match(/\[\[([^|\]]+)(?:\|[^\]]+)?\]\]/g) || [];
+                                
                                 links.forEach(link => {
                                     const cityName = link.replace(/[\[\]]/g, '').split('|').pop().trim();
                                     
-                                    if (cityName.length < 2 || /^(Файл|File|Image|Категория):/i.test(cityName)) return;
-
-                                    let fullLoc = (countryPrefix && countryPrefix !== cityName) 
-                                        ? `${countryPrefix}: ${cityName}` 
-                                        : cityName;
+                                    // Полный игнор технических ссылок и мусора
+                                    if (cityName.length < 2 || 
+                                        /^(Файл|File|Image|Категория):/i.test(cityName) || 
+                                        cityName.toLowerCase().includes('px')) return;
+                            
+                                    // 3. Формируем префикс страны, исключая из него название самого города
+                                    // (чтобы не было "Барселона: Барселона")
+                                    const filteredCountries = flags.filter(f => 
+                                        f.toLowerCase() !== cityName.toLowerCase()
+                                    );
                                     
-                                    if (!locations.includes(fullLoc)) locations.push(fullLoc);
+                                    const countryPrefix = [...new Set(filteredCountries)].join('/');
+                                    
+                                    let fullLoc = countryPrefix ? `${countryPrefix}: ${cityName}` : cityName;
+                                    
+                                    if (!locations.includes(fullLoc)) {
+                                        locations.push(fullLoc);
+                                    }
                                 });
                             });
 
