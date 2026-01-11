@@ -1,9 +1,30 @@
-# info
+# Орёл и Решка — интерактивная карта выпусков
 
-this repo:
+Небольшой неофициальный проект, визуализирующий географию выпусков телепередачи
+«Орёл и Решка» на интерактивной карте мира.
 
-gets data from https://cyclowiki.org/wiki/Выпуски_телепередачи_«Орёл_и_решка»
+## Источники данных
 
-parses names and shows them on the map;
+Данные получены автоматически через MediaWiki API со страницы Cyclowiki:  
+https://cyclowiki.org/wiki/Выпуски_телепередачи_«Орёл_и_решка»
 
-gets coordinates with - https://nominatim.openstreetmap.org
+Текст страницы доступен по лицензиям:
+- GNU Free Documentation License (GFDL)
+- Creative Commons Attribution-ShareAlike (CC BY-SA 3.0 / 4.0)
+
+## Используемые технологии
+
+- HTML / CSS / JavaScript
+- Leaflet
+- OpenStreetMap
+- Nominatim (OpenStreetMap)
+
+## Атрибуция
+
+© OpenStreetMap contributors  
+Геокодирование: Nominatim
+
+## Правовой статус
+
+Проект является неофициальным и не аффилирован с правообладателями телепередачи
+«Орёл и Решка».
