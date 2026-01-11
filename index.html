@@ -13,43 +13,40 @@
         async function fetchData() {
             const statusEl = document.getElementById('status');
             const outputEl = document.getElementById('output');
-            
-            const targetUrl = 'https://cyclowiki.org/w/index.php?title=%D0%92%D1%8B%D0%BF%D1%83%D1%81%D0%BA%D0%B8_%D1%82%D0%B5%D0%BB%D0%B5%D0%BF%D0%B5%D1%80%D0%B5%D0%B4%D0%B0%D1%87%D0%B8_%C2%AB%D0%9E%D1%80%D1%91%D0%BB_%D0%B8_%D1%80%D0%B5%D1%88%D0%BA%D0%B0%C2%BB&action=edit&section=2';
-            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+        
+            // Используем API напрямую. origin=* — это ключ к успеху для CORS на GitHub Pages
+            const apiUrl = "https://cyclowiki.org/w/api.php?" + 
+                new URLSearchParams({
+                    action: "parse",
+                    page: "Выпуски_телепередачи_«Орёл_и_решка»",
+                    section: "2",
+                    prop: "wikitext", // получаем чистый текст, а не HTML
+                    format: "json",
+                    origin: "*" // Важнейший параметр для обхода CORS
+                });
         
             try {
-                const response = await fetch(proxyUrl);
-        
-                // 1. Проверяем, что сам прокси ответил успешно (код 200-299)
-                if (!response.ok) {
-                    throw new Error(`Ошибка прокси-сервера: ${response.status}`);
-                }
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error(`Ошибка сети: ${response.status}`);
         
                 const data = await response.json();
-        
-                // 2. AllOrigins может вернуть null в data.contents, если целевой сайт упал
-                if (!data || !data.contents) {
-                    throw new Error('Целевой сайт не отдал данные (пустой ответ)');
+                
+                if (data.parse && data.parse.wikitext) {
+                    const rawText = data.parse.wikitext["*"];
+                    
+                    statusEl.innerText = "Данные получены через API!";
+                    statusEl.style.color = "green";
+                    
+                    // Выводим результат
+                    outputEl.innerText = rawText;
+                } else {
+                    throw new Error("Не удалось найти текст секции в ответе API");
                 }
-        
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(data.contents, 'text/html');
-                const wikiField = doc.querySelector('#wpTextbox1');
-        
-                if (!wikiField) {
-                    throw new Error('Не удалось найти Wiki-текст. Возможно, структура страницы изменилась.');
-                }
-        
-                const wikiText = wikiField.value;
-                // ... ваша логика парсинга ...
-                statusEl.innerText = 'Данные успешно загружены!';
-                outputEl.innerText = wikiText.substring(0, 500) + '...'; // Показываем начало текста
         
             } catch (error) {
-                // Теперь любая ошибка (500, 404, CORS) попадет сюда
-                statusEl.innerText = '❌ Ошибка: ' + error.message;
-                statusEl.style.color = 'red';
-                console.error('Подробности ошибки:', error);
+                statusEl.innerText = "❌ Ошибка: " + error.message;
+                statusEl.style.color = "red";
+                console.error(error);
             }
         }
         
