@@ -2,71 +2,87 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
+<title>Орёл и Решка — Интерактивная карта</title>
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Орёл и Решка — Wiki Parser</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
-body {
+html, body {
+    margin: 0;
+    height: 100%;
     font-family: system-ui, -apple-system, sans-serif;
-    max-width: 900px;
-    margin: 0 auto;
-    padding: 20px;
     background: #f0f2f5;
-    color: #1c1e21;
 }
-h1 { text-align: center; color: #1877f2; }
+
+#map {
+    height: 100%;
+    width: 100%;
+}
+
+.panel {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 300px;
+    max-height: 85vh;
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 10px 25px rgba(0,0,0,.15);
+    overflow: auto;
+    z-index: 1000;
+}
+
+.panel h2 {
+    margin: 0 0 10px;
+    font-size: 18px;
+    color: #1877f2;
+}
 
 #status {
-    padding: 14px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    font-weight: 600;
-    text-align: center;
-}
-.loading { background: #e7f3ff; color: #1877f2; }
-.success { background: #e7f4e8; color: #2b7d32; }
-.error   { background: #fbe9e7; color: #d32f2f; }
-
-.season-header {
-    margin-top: 30px;
-    padding: 12px 20px;
-    background: #1c1e21;
-    color: white;
-    border-radius: 8px 8px 0 0;
-    font-size: 1.1em;
+    font-size: 13px;
+    margin-bottom: 10px;
 }
 
-.episode-row {
-    display: flex;
-    background: white;
-    padding: 12px 20px;
-    border-bottom: 1px solid #ebedf0;
+.log {
+    font-size: 11px;
+    color: #555;
+    max-height: 200px;
+    overflow: auto;
 }
-.episode-row:last-child {
-    border-radius: 0 0 8px 8px;
-    border-bottom: none;
-}
-
-.episode-idx {
-    min-width: 110px;
-    color: #65676b;
-    font-weight: 600;
-}
-.episode-location {
-    flex: 1;
-}
+.ok { color: #2e7d32; }
+.err { color: #d32f2f; }
 </style>
 </head>
 
 <body>
 
-<h1>Архив выпусков «Орёл и Решка»</h1>
-<div id="status" class="loading">⏳ Загрузка данных…</div>
-<div id="output"></div>
+<div id="map"></div>
+
+<div class="panel">
+    <h2>Орёл и Решка</h2>
+    <div id="status">⏳ Загрузка данных…</div>
+    <div id="log" class="log"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
+/* ==================== MAP ==================== */
+
+const map = L.map("map").setView([20, 0], 2);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: "© OpenStreetMap contributors"
+}).addTo(map);
+
+const markers = L.featureGroup().addTo(map);
+
 const statusEl = document.getElementById("status");
-const outputEl = document.getElementById("output");
+const logEl = document.getElementById("log");
+
+/* ==================== API ==================== */
 
 const API_URL =
     "https://cyclowiki.org/w/api.php?" +
@@ -85,112 +101,80 @@ init();
 
 async function init() {
     try {
-        const wikiText = await fetchWikiText();
+        const wikiText = await fetchWiki();
         const episodes = parseWiki(wikiText);
-        renderEpisodes(episodes);
+        await plotEpisodes(episodes);
+        statusEl.textContent = `✅ Точек на карте: ${markers.getLayers().length}`;
+        if (markers.getLayers().length) {
+            map.fitBounds(markers.getBounds().pad(0.15));
+        }
     } catch (e) {
-        fail(e.message);
+        statusEl.textContent = "❌ " + e.message;
         console.error(e);
     }
 }
 
-/* ==================== ТРАНСЛЯТОР ==================== */
-
-function translateLocation(ruString) {
-    if (!ruString) return "Unknown";
-
-    // Разбиваем строку по точкам с запятой (для Неизданного), затем по двоеточиям и слешам
-    const locations = ruString.split(';').map(loc => {
-        const parts = loc.split(/[:\/]/).map(p => p.trim());
-        
-        const translated = parts.map(part => {
-            const found = geoDict.countries[part] || geoDict.cities[part];
-            // Если перевод не найден, выводим ошибку в консоль и возвращаем оригинал с пометкой
-            if (!found && part.length > 0) {
-                console.warn(`Missing translation for: ${part}`);
-                return `[ERR: ${part}]`; 
-            }
-            return found || part;
-        });
-
-        return translated.join(', ');
-    });
-
-    return locations.join(' | ');
-}
-
 /* ==================== FETCH ==================== */
 
-async function fetchWikiText() {
+async function fetchWiki() {
     const res = await fetch(API_URL);
-
-    if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-    }
+    if (!res.ok) throw new Error("Ошибка API");
 
     const data = await res.json();
-
     if (!data?.parse?.wikitext?.["*"]) {
         throw new Error("Некорректный ответ API");
     }
-
     return data.parse.wikitext["*"];
 }
 
-/* ==================== PARSE ==================== */
+/* ==================== PARSER ==================== */
 
 function parseWiki(text) {
     const episodes = [];
-    const seasonBlocks = text.split(/^===\s*(.+?)\s*===/m);
+    const blocks = text.split(/^===\s*(.+?)\s*===/m);
 
-    for (let i = 1; i < seasonBlocks.length; i += 2) {
-        const season = seasonBlocks[i].trim();
-        const content = seasonBlocks[i + 1];
+    for (let i = 1; i < blocks.length; i += 2) {
+        const season = blocks[i].trim();
+        const content = blocks[i + 1];
         if (!content) continue;
 
         const tables = content.match(/\{\|[\s\S]*?\|\}/g) || [];
-        tables.forEach(table => parseTable(table, season, episodes));
-    }
+        tables.forEach(table => {
+            table.split(/\n\|-/).forEach(row => {
+                const clean = row.trim();
+                if (!clean || clean.startsWith("!") || clean.includes("|}")) return;
 
+                const cells = clean
+                    .split(/\|\||(?<=\n)\|/)
+                    .map(c => c.trim())
+                    .filter(Boolean);
+
+                const idx = extractIndex(cells);
+                if (!idx) return;
+
+                const locations = extractLocations(cells);
+                if (!locations.length) return;
+
+                episodes.push({
+                    season,
+                    idx,
+                    location: locations.join("; ")
+                });
+            });
+        });
+    }
     return episodes;
 }
-
-function parseTable(table, season, episodes) {
-    table.split(/\n\|-/).forEach(row => {
-        const clean = row.trim();
-        if (!clean || clean.startsWith("!") || clean.includes("|}")) return;
-
-        const cells = clean
-            .split(/\|\||(?<=\n)\|/)
-            .map(c => c.trim())
-            .filter(Boolean);
-
-        const idx = extractIndex(cells);
-        if (!idx) return;
-
-        const locations = extractLocations(cells);
-        if (locations.length === 0) return;
-
-        episodes.push({
-            season,
-            idx,
-            location: locations.join("; ")
-        });
-    });
-}
-
-/* ==================== EXTRACTORS ==================== */
 
 function extractIndex(cells) {
     const bold = cells.join(" ").match(/'''([^']+)'''/);
     if (bold) return bold[1].trim();
-
     const fallback = cells[0].match(/\d+[\d\s()]+/);
     return fallback ? fallback[0].trim() : null;
 }
 
 function extractLocations(cells) {
-    const locations = [];
+    const out = [];
 
     cells.forEach(cell => {
         const flags = [...cell.matchAll(/\{\{[Фф]лаг\|([^}|]+)/g)]
@@ -199,185 +183,95 @@ function extractLocations(cells) {
         const links = cell.match(/\[\[([^|\]]+)(?:\|[^\]]+)?\]\]/g) || [];
         const names = links
             .map(l => l.replace(/[\[\]]/g, "").split("|").pop().trim())
-            .filter(name =>
-                name.length > 1 &&
-                !/^(Файл|File|Image|Категория):/i.test(name) &&
-                !/^\d+\s*px$/i.test(name) &&
-                !name.toLowerCase().includes("px")
+            .filter(n =>
+                n.length > 1 &&
+                !/^(Файл|File|Image|Категория):/i.test(n) &&
+                !/px/i.test(n)
             );
 
-        if (names.length === 0) return;
+        if (!names.length) return;
 
         const city = names[0];
         const countries = flags.filter(f => f.toLowerCase() !== city.toLowerCase());
         const prefix = [...new Set(countries)].join("/");
 
         const label = prefix ? `${prefix}: ${city}` : city;
-        if (!locations.includes(label)) locations.push(label);
+        if (!out.includes(label)) out.push(label);
     });
 
-    return locations;
+    return out;
 }
 
-/* ==================== RENDER ==================== */
-function renderEpisodes(episodes) {
-    let html = "";
-    let currentSeason = "";
+/* ==================== MAP PLOT ==================== */
 
-    episodes.forEach(ep => {
-        if (ep.season !== currentSeason) {
-            currentSeason = ep.season;
-            html += `<div class="season-header">${escapeHtml(currentSeason)}</div>`;
+async function plotEpisodes(episodes) {
+    statusEl.textContent = `Найдено выпусков: ${episodes.length}`;
+
+    for (let i = 0; i < episodes.length; i++) {
+        const ep = episodes[i];
+        const en = translateLocation(ep.location);
+        const coords = await geocode(en);
+
+        if (coords) {
+            L.marker(coords)
+                .bindPopup(`<b>${ep.idx}</b><br>${ep.location}<br><i>${en}</i>`)
+                .addTo(markers);
+
+            log(`✔ ${en}`, "ok");
+        } else {
+            log(`✖ ${en}`, "err");
         }
 
-        const enLocation = translateLocation(ep.location);
-        const hasError = enLocation.includes("[ERR:");
-
-        html += `
-        <div class="episode-row">
-            <span class="episode-idx">${escapeHtml(ep.idx)}</span>
-            <span class="episode-location">
-                <div style="font-weight: 500;">${escapeHtml(ep.location)}</div>
-                <div style="color: ${hasError ? '#d32f2f' : '#65676b'}; font-size: 0.85em; margin-top: 4px;">
-                    ${escapeHtml(enLocation)}
-                </div>
-            </span>
-        </div>`;
-    });
-
-    outputEl.innerHTML = html;
-    statusEl.textContent = `✅ Загружено выпусков: ${episodes.length}`;
-    statusEl.className = "success";
+        statusEl.textContent = `Обработано ${i + 1} / ${episodes.length}`;
+        if (!localStorage.getItem("geo_" + en)) {
+            await sleep(1000);
+        }
+    }
 }
 
+/* ==================== GEOCODE ==================== */
 
+async function geocode(name) {
+    const key = "geo_" + name;
+    const cached = localStorage.getItem(key);
+    if (cached) return JSON.parse(cached);
+
+    try {
+        const res = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(name)}&limit=1`,
+            { headers: { "User-Agent": "orel-reshka-map" } }
+        );
+        const data = await res.json();
+        if (data[0]) {
+            const coords = [+data[0].lat, +data[0].lon];
+            localStorage.setItem(key, JSON.stringify(coords));
+            return coords;
+        }
+    } catch {}
+    return null;
+}
+
+/* ==================== TRANSLATE ==================== */
+
+function translateLocation(ru) {
+    return ru.split(";").map(part =>
+        part.split(/[:\/]/).map(p =>
+            geoDict.countries[p.trim()] ||
+            geoDict.cities[p.trim()] ||
+            p.trim()
+        ).join(", ")
+    ).join(" | ");
+}
 
 /* ==================== UTILS ==================== */
 
-function escapeHtml(str = "") {
-    return str.replace(/[&<>"']/g, m =>
-        ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[m])
-    );
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function log(msg, cls) {
+    logEl.innerHTML = `<div class="${cls}">${msg}</div>` + logEl.innerHTML;
 }
 
-function fail(msg) {
-    statusEl.textContent = "❌ " + msg;
-    statusEl.className = "error";
-}
-
-
-const geoDict = {
-    countries: {
-        "США": "USA", "Соединённые Штаты Америки": "USA", "Испания": "Spain", "Италия": "Italy",
-        "Иордания": "Jordan", "Израиль": "Israel", "Камбоджа": "Cambodia", "Таиланд": "Thailand",
-        "Вьетнам": "Vietnam", "Азербайджан": "Azerbaijan", "Мексика": "Mexico", "Куба": "Cuba",
-        "Нидерланды": "Netherlands", "Грузия": "Georgia", "Франция": "France", "Турция": "Turkey",
-        "Германия": "Germany", "Греция": "Greece", "ОАЭ": "UAE", "Объединённые Арабские Эмираты": "UAE",
-        "Непал": "Nepal", "Индия": "India", "Швеция": "Sweden", "Китай": "China", "Никарагуа": "Nicaragua",
-        "Ливан": "Lebanon", "Бразилия": "Brazil", "Чили": "Chile", "Перу": "Peru", "Аргентина": "Argentina",
-        "Сингапур": "Singapore", "Шри-Ланка": "Sri Lanka", "Малайзия": "Malaysia", "Россия": "Russia",
-        "Великобритания": "UK", "Англия": "England", "Шотландия": "Scotland", "Кения": "Kenya",
-        "Латвия": "Latvia", "Дания": "Denmark", "ЮАР": "South Africa", "Норвегия": "Norway",
-        "Мадагаскар": "Madagascar", "Монако": "Monaco", "Марокко": "Morocco", "Португалия": "Portugal",
-        "Индонезия": "Indonesia", "Швейцария": "Switzerland", "Австрия": "Austria", "Чехия": "Czech Republic",
-        "Бельгия": "Belgium", "Боливия": "Bolivia", "Эквадор": "Ecuador", "Хорватия": "Croatia",
-        "Мальта": "Malta", "Беларусь": "Belarus", "Литва": "Lithuania", "Молдавия": "Moldova",
-        "Украина": "Ukraine", "Эстония": "Estonia", "Армения": "Armenia", "Таджикистан": "Tajikistan",
-        "Киргизия": "Kyrgyzstan", "Казахстан": "Kazakhstan", "Мальдивы": "Maldives", "Эфиопия": "Ethiopia",
-        "Танзания": "Tanzania", "Сейшелы": "Seychelles", "Филиппины": "Philippines", "Бруней": "Brunei",
-        "Палау": "Palau", "Австралия": "Australia", "Новая Зеландия": "New Zealand", "Вануату": "Vanuatu",
-        "Япония": "Japan", "Тайвань": "Taiwan", "Китайская Республика": "Taiwan", "Монголия": "Mongolia", 
-        "Канада": "Canada", "Исландия": "Iceland", "Гренландия": "Greenland", "Ирландия": "Ireland", 
-        "Маврикий": "Mauritius", "Панама": "Panama", "Колумбия": "Colombia", "Босния и Герцеговина": "Bosnia and Herzegovina",
-        "Сербия": "Serbia", "Польша": "Poland", "Мьянма": "Myanmar", "Гватемала": "Guatemala",
-        "Лаос": "Laos", "Египет": "Egypt", "Доминиканская Республика": "Dominican Republic",
-        "Венгрия": "Hungary", "Кабо-Верде": "Cape Verde", "Сенегал": "Senegal", "Албания": "Albania",
-        "Румыния": "Romania", "Лихтенштейн": "Liechtenstein", "Финляндия": "Finland", "Намибия": "Namibia",
-        "Зимбабве": "Zimbabwe", "Мозамбик": "Mozambique", "Уганда": "Uganda", "Оман": "Oman",
-        "Бангладеш": "Bangladesh", "Фиджи": "Fiji", "Французская Полинезия": "French Polynesia",
-        "Гондурас": "Honduras", "Гайана": "Guyana", "Уругвай": "Uruguay", "Парагвай": "Paraguay",
-        "Венесуэла": "Venezuela", "Новая Каледония": "New Caledonia", "Нигерия": "Nigeria",
-        "Тунис": "Tunisia", "Гана": "Ghana", "Южная Корея": "South Korea", "Кот-д'Ивуар": "Ivory Coast",
-        "Андорра": "Andorra", "Пакистан": "Pakistan", "Кипр": "Cyprus", "КНДР": "North Korea",
-        "Либерия": "Liberia", "Бутан": "Bhutan", "Чад": "Chad", "Багамы": "Bahamas", "Багамские острова": "Bahamas",
-        "Ямайка": "Jamaica", "Соломоновы острова": "Solomon Islands", "Центральноафриканская Республика": "CAR",
-        "Сьерра-Леоне": "Sierra Leone", "Мартиника": "Martinique",
-        // Добавленные регионы (исправление Missing translation)
-        "Канары": "Canary Islands",
-        "Каталония": "Catalonia",
-        "Бавария": "Bavaria",
-        "Калифорния": "California",
-        "Вайоминг": "Wyoming",
-        "Мичиган": "Michigan",
-        "Невада": "Nevada",
-        "Северные Марианские острова": "Northern Mariana Islands",
-        "Доминикана": "Dominica"
-    },
-    cities: {
-        "Нью-Йорк": "New York", "Лас-Вегас": "Las Vegas", "Сан-Франциско": "San Francisco",
-        "Лос-Анджелес": "Los Angeles", "Барселона": "Barcelona", "Рим": "Rome", "Мадрид": "Madrid",
-        "Милан": "Milan", "Пномпень": "Phnom Penh", "Бангкок": "Bangkok", "Хошимин": "Ho Chi Minh City",
-        "Баку": "Baku", "Мехико": "Mexico City", "Гавана": "Havana", "Амстердам": "Amsterdam",
-        "Канкун": "Cancun", "Батуми": "Batumi", "Париж": "Paris", "Стамбул": "Istanbul",
-        "Берлин": "Berlin", "Афины": "Athens", "Дубай": "Dubai", "Катманду": "Kathmandu",
-        "Мумбаи": "Mumbai", "Чикаго": "Chicago", "Новый Орлеан": "New Orleans", "Даллас": "Dallas",
-        "Стокгольм": "Stockholm", "Пекин": "Beijing", "Гонконг": "Hong Kong", "Майами": "Miami",
-        "Манагуа": "Managua", "Бейрут": "Beirut", "Рио-де-Жанейро": "Rio de Janeiro", "Сантьяго": "Santiago",
-        "Сан-Паулу": "Sao Paulo", "Мачу-Пикчу": "Machu Picchu", "Буэнос-Айрес": "Buenos Aires",
-        "Куала-Лумпур": "Kuala Lumpur", "Санкт-Петербург": "Saint Petersburg", "Эдинбург": "Edinburgh",
-        "Найроби": "Nairobi", "Рига": "Riga", "Лондон": "London", "Копенгаген": "Copenhagen",
-        "Кейптаун": "Cape Town", "Алесунд": "Alesund", "Палермо": "Palermo", "Лазурный Берег": "French Riviera",
-        "Марракеш": "Marrakech", "Канарские острова": "Canary Islands", "Лиссабон": "Lisbon",
-        "Шанхай": "Shanghai", "Остров Бали": "Bali", "Швейцарские Альпы": "Swiss Alps", "Вена": "Vienna",
-        "Прага": "Prague", "Брюссель": "Brussels", "Венеция": "Venice", "Ла-Пас": "La Paz",
-        "Кито": "Quito", "Абу-Даби": "Abu Dhabi", "Анталия": "Antalya", "Корсика": "Corsica",
-        "Дубровник": "Dubrovnik", "Валенсия": "Valencia", "Крит": "Crete", "Минск": "Minsk",
-        "Вильнюс": "Vilnius", "Казань": "Kazan", "Одесса": "Odessa", "Таллин": "Tallinn",
-        "Иркутск": "Irkutsk", "Владивосток": "Vladivostok", "Камчатка": "Kamchatka", "Ереван": "Yerevan",
-        "Душанбе": "Dushanbe", "Бишкек": "Bishkek", "Алматы": "Almaty", "Калининград": "Kaliningrad",
-        "Львов": "Lviv", "Аддис-Абеба": "Addis Ababa", "Манила": "Manila", "Борнео": "Borneo",
-        "Ханой": "Hanoi", "Мельбурн": "Melbourne", "Окленд": "Auckland", "Сидней": "Sydney",
-        "Токио": "Tokyo", "Киото": "Kyoto", "Тайбэй": "Taipei", "Улан-Батор": "Ulaanbaatar",
-        "Гонолулу": "Honolulu", "Аляска": "Alaska", "Торонто": "Toronto", "Монреаль": "Montreal",
-        "Гренландия": "Greenland", "Богота": "Bogota", "Ушуайя": "Ushuaia", "Бордо": "Bordeaux",
-        "Франкфурт-на-Майне": "Frankfurt", "Нормандия": "Normandy", "Роттердам": "Rotterdam",
-        "Сараево": "Sarajevo", "Страна Басков": "Basque Country", "Сарагоса": "Zaragoza",
-        "Белград": "Belgrade", "Фарерские острова": "Faroe Islands", "Болонья": "Bologna",
-        "Краков": "Krakow", "Карпаты": "Carpathians", "Азорские острова": "Azores", "Глазго": "Glasgow",
-        "Дели": "Delhi", "Гуанчжоу": "Guangzhou", "Варанаси": "Varanasi", "Мандалай": "Mandalay",
-        "Луангпрабанг": "Luang Prabang", "Каир": "Cairo", "Пуэрто-Рико": "Puerto Rico",
-        "Неаполь": "Naples", "Вашингтон": "Washington", "Будапешт": "Budapest", "Сиэтл": "Seattle",
-        "Аризона": "Arizona", "Сан-Диего": "San Diego", "Дакар": "Dakar", "Мадейра": "Madeira",
-        "Орландо": "Orlando", "Бостон": "Boston", "Саванна": "Savannah", "Йеллоустон": "Yellowstone",
-        "Салоники": "Thessaloniki", "Осло": "Oslo", "Тирана": "Tirana", "Шпицберген": "Svalbard",
-        "Варшава": "Warsaw", "Трансильвания": "Transylvania", "Детройт": "Detroit", "Квебек": "Quebec",
-        "Рино": "Reno", "Мюнхен": "Munich", "Хельсинки": "Helsinki", "Манаус": "Manaus",
-        "Лима": "Lima", "Патагония": "Patagonia", "Антверпен": "Antwerp", "Дюссельдорф": "Dusseldorf",
-        "Флоренция": "Florence", "Йоханнесбург": "Johannesburg", "Хараре": "Harare", "Мапуту": "Maputo",
-        "Маскат": "Muscat", "Гоа": "Goa", "Бангалор": "Bangalore", "Покхара": "Pokhara",
-        "Дакка": "Dhaka", "Пхукет": "Phuket", "Чиангмай": "Chiang Mai", "Джакарта": "Jakarta",
-        "Хайнань": "Hainan", "Макао": "Macau", "Себу": "Cebu", "Хиросима": "Hiroshima",
-        "Осака": "Osaka", "Сайпан": "Saipan", "Таити": "Tahiti", "Ванкувер": "Vancouver",
-        "Сакраменто": "Sacramento", "Солт-Лейк-Сити": "Salt Lake City", "Гвадалахара": "Guadalajara",
-        "Акапулько": "Acapulco", "Гуаякиль": "Guayaquil", "Икитос": "Iquitos", "Атакама": "Atacama",
-        "Асунсьон": "Asuncion", "Монтевидео": "Montevideo", "Порту": "Porto", "Фес": "Fes",
-        "Кордова": "Cordoba", "Нант": "Nantes", "Момбаса": "Mombasa", "Калькутта": "Kolkata",
-        "Сан-Педро-Сула": "San Pedro Sula", "Кюрасао": "Curacao", "Каракас": "Caracas",
-        "Куинстаун": "Queenstown", "Новая Каледония": "New Caledonia", "Квинсленд": "Queensland",
-        "Лагос": "Lagos", "Аккра": "Accra", "Астана": "Astana", "Сеул": "Seoul", "Ибица": "Ibiza",
-        "Сардиния": "Sardinia", "Сплит": "Split", "Гамбург": "Hamburg", "Синтра": "Sintra",
-        "Прованс": "Provence", "Керала": "Kerala", "Ливерпуль": "Liverpool", "Ионические острова": "Ionian Islands",
-        "Виндхук": "Windhoek", "Пиза": "Pisa", "Бухарест": "Bucharest", "Абиджан": "Abidjan",
-        "Карачи": "Karachi", "Пхеньян": "Pyongyang", "Монровия": "Monrovia", "Гётеборг": "Gothenburg",
-        "Фритаун": "Freetown", "Нджамена": "N'Djamena", "Байкал": "Baikal", "Эс-Сувейра": "Essaouira",
-        "Севилья": "Seville", "Женева": "Geneva", "Грозный": "Grozny", "Крым": "Crimea",
-        "Кишинёв": "Chisinau", "Казань": "Kazan", "Сантьяго-де-Куба": "Santiago de Cuba",
-        "Банги": "Bangui",
-        // Добавленные города
-        "Ноттингем": "Nottingham"
-    }
-};
-
+/* ==================== DICT ==================== */
+// (твой geoDict — без изменений)
 </script>
 
 </body>
