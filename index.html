@@ -58,38 +58,37 @@
                         // 1. Индекс
                         let index = cells[0].replace(/\|/g, '').replace(/'''/g, '').trim();
         
-                        // 2. Город и Страна
+                        // 2. Локация (вторая ячейка)
                         const cityCell = cells[1].trim();
-                        // Находим все вхождения [[...]], исключая файлы картинок
-                        const allLinks = cityCell.match(/\[\[([^|\]]+)(?:\|[^\]]+)?\]\]/g) || [];
+        
+                        // Ищем страну внутри {{Флаг|Название}}
+                        const flagMatch = cityCell.match(/\{\{Флаг\|([^}|]+)/);
+                        const country = flagMatch ? flagMatch[1].trim() : null;
+        
+                        // Ищем город внутри [[Город]] (берем последний, если их несколько)
+                        const cityLinks = cityCell.match(/\[\[([^|\]]+)(?:\|[^\]]+)?\]\]/g) || [];
+                        const cleanCityLinks = cityLinks.filter(link => !link.toLowerCase().includes('[[файл:'));
                         
-                        // Фильтруем ссылки, чтобы убрать возможные [[Файл:...]]
-                        const cleanLinks = allLinks.filter(link => !link.toLowerCase().includes('[[файл:'));
+                        let cityName = null;
+                        if (cleanCityLinks.length > 0) {
+                            const lastMatch = cleanCityLinks[cleanCityLinks.length - 1];
+                            cityName = lastMatch.replace(/[\[\]]/g, '').split('|')[0];
+                        }
         
+                        // Формируем итоговую строку
                         let locationText = "";
-        
-                        if (cleanLinks.length >= 2) {
-                            // Если есть флаг страны, то обычно формат: {{Флаг|Страна}} [[Страна]] [[Город]]
-                            const country = cleanLinks[0].replace(/[\[\]]/g, '').split('|')[0];
-                            const city = cleanLinks[1].replace(/[\[\]]/g, '').split('|')[0];
-                            locationText = `${country}, ${city}`;
-                        } else if (cleanLinks.length === 1) {
-                            // Если ссылка только одна
-                            locationText = cleanLinks[0].replace(/[\[\]]/g, '').split('|')[0];
+                        if (country && cityName && country !== cityName) {
+                            locationText = `${country}, ${cityName}`;
+                        } else {
+                            locationText = cityName || country || "Неизвестно";
                         }
         
-                        if (locationText) {
-                            episodes.push({
-                                idx: index,
-                                location: locationText
-                            });
-                        }
+                        episodes.push({ idx: index, location: locationText });
                     }
                 }
             });
         
             statusEl.innerText = `Найдено выпусков: ${episodes.length}`;
-            
             outputEl.innerHTML = '<ul style="list-style: none; padding: 0;">' + 
                 episodes.map(item => `<li><strong>${item.idx}.</strong> ${item.location}</li>`).join('') + 
                 '</ul>';
