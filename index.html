@@ -94,6 +94,31 @@ async function init() {
     }
 }
 
+/* ==================== ТРАНСЛЯТОР ==================== */
+
+function translateLocation(ruString) {
+    if (!ruString) return "Unknown";
+
+    // Разбиваем строку по точкам с запятой (для Неизданного), затем по двоеточиям и слешам
+    const locations = ruString.split(';').map(loc => {
+        const parts = loc.split(/[:\/]/).map(p => p.trim());
+        
+        const translated = parts.map(part => {
+            const found = geoDict.countries[part] || geoDict.cities[part];
+            // Если перевод не найден, выводим ошибку в консоль и возвращаем оригинал с пометкой
+            if (!found && part.length > 0) {
+                console.warn(`Missing translation for: ${part}`);
+                return `[ERR: ${part}]`; 
+            }
+            return found || part;
+        });
+
+        return translated.join(', ');
+    });
+
+    return locations.join(' | ');
+}
+
 /* ==================== FETCH ==================== */
 
 async function fetchWikiText() {
@@ -195,13 +220,7 @@ function extractLocations(cells) {
 }
 
 /* ==================== RENDER ==================== */
-
 function renderEpisodes(episodes) {
-    if (episodes.length === 0) {
-        fail("Ничего не найдено");
-        return;
-    }
-
     let html = "";
     let currentSeason = "";
 
@@ -211,10 +230,18 @@ function renderEpisodes(episodes) {
             html += `<div class="season-header">${escapeHtml(currentSeason)}</div>`;
         }
 
+        const enLocation = translateLocation(ep.location);
+        const hasError = enLocation.includes("[ERR:");
+
         html += `
         <div class="episode-row">
             <span class="episode-idx">${escapeHtml(ep.idx)}</span>
-            <span class="episode-location">${escapeHtml(ep.location)}</span>
+            <span class="episode-location">
+                <div style="font-weight: 500;">${escapeHtml(ep.location)}</div>
+                <div style="color: ${hasError ? '#d32f2f' : '#65676b'}; font-size: 0.85em; margin-top: 4px;">
+                    ${escapeHtml(enLocation)}
+                </div>
+            </span>
         </div>`;
     });
 
@@ -222,6 +249,8 @@ function renderEpisodes(episodes) {
     statusEl.textContent = `✅ Загружено выпусков: ${episodes.length}`;
     statusEl.className = "success";
 }
+
+
 
 /* ==================== UTILS ==================== */
 
@@ -235,6 +264,108 @@ function fail(msg) {
     statusEl.textContent = "❌ " + msg;
     statusEl.className = "error";
 }
+
+
+const geoDict = {
+    countries: {
+        "США": "USA", "Соединённые Штаты Америки": "USA", "Испания": "Spain", "Италия": "Italy",
+        "Иордания": "Jordan", "Израиль": "Israel", "Камбоджа": "Cambodia", "Таиланд": "Thailand",
+        "Вьетнам": "Vietnam", "Азербайджан": "Azerbaijan", "Мексика": "Mexico", "Куба": "Cuba",
+        "Нидерланды": "Netherlands", "Грузия": "Georgia", "Франция": "France", "Турция": "Turkey",
+        "Германия": "Germany", "Греция": "Greece", "ОАЭ": "UAE", "Объединённые Арабские Эмираты": "UAE",
+        "Непал": "Nepal", "Индия": "India", "Швеция": "Sweden", "Китай": "China", "Никарагуа": "Nicaragua",
+        "Ливан": "Lebanon", "Бразилия": "Brazil", "Чили": "Chile", "Перу": "Peru", "Аргентина": "Argentina",
+        "Сингапур": "Singapore", "Шри-Ланка": "Sri Lanka", "Малайзия": "Malaysia", "Россия": "Russia",
+        "Великобритания": "UK", "Англия": "England", "Шотландия": "Scotland", "Кения": "Kenya",
+        "Латвия": "Latvia", "Дания": "Denmark", "ЮАР": "South Africa", "Норвегия": "Norway",
+        "Мадагаскар": "Madagascar", "Монако": "Monaco", "Марокко": "Morocco", "Португалия": "Portugal",
+        "Индонезия": "Indonesia", "Швейцария": "Switzerland", "Австрия": "Austria", "Чехия": "Czech Republic",
+        "Бельгия": "Belgium", "Боливия": "Bolivia", "Эквадор": "Ecuador", "Хорватия": "Croatia",
+        "Мальта": "Malta", "Беларусь": "Belarus", "Литва": "Lithuania", "Молдавия": "Moldova",
+        "Украина": "Ukraine", "Эстония": "Estonia", "Армения": "Armenia", "Таджикистан": "Tajikistan",
+        "Киргизия": "Kyrgyzstan", "Казахстан": "Kazakhstan", "Мальдивы": "Maldives", "Эфиопия": "Ethiopia",
+        "Танзания": "Tanzania", "Сейшелы": "Seychelles", "Филиппины": "Philippines", "Бруней": "Brunei",
+        "Палау": "Palau", "Австралия": "Australia", "Новая Зеландия": "New Zealand", "Вануату": "Vanuatu",
+        "Япония": "Japan", "Тайвань": "Taiwan", "Китайская Республика": "Taiwan", "Монголия": "Mongolia", 
+        "Канада": "Canada", "Исландия": "Iceland", "Гренландия": "Greenland", "Ирландия": "Ireland", 
+        "Маврикий": "Mauritius", "Панама": "Panama", "Колумбия": "Colombia", "Босния и Герцеговина": "Bosnia and Herzegovina",
+        "Сербия": "Serbia", "Польша": "Poland", "Мьянма": "Myanmar", "Гватемала": "Guatemala",
+        "Лаос": "Laos", "Египет": "Egypt", "Доминиканская Республика": "Dominican Republic",
+        "Венгрия": "Hungary", "Кабо-Верде": "Cape Verde", "Сенегал": "Senegal", "Албания": "Albania",
+        "Румыния": "Romania", "Лихтенштейн": "Liechtenstein", "Финляндия": "Finland", "Намибия": "Namibia",
+        "Зимбабве": "Zimbabwe", "Мозамбик": "Mozambique", "Уганда": "Uganda", "Оман": "Oman",
+        "Бангладеш": "Bangladesh", "Фиджи": "Fiji", "Французская Полинезия": "French Polynesia",
+        "Гондурас": "Honduras", "Гайана": "Guyana", "Уругвай": "Uruguay", "Парагвай": "Paraguay",
+        "Венесуэла": "Venezuela", "Новая Каледония": "New Caledonia", "Нигерия": "Nigeria",
+        "Тунис": "Tunisia", "Гана": "Ghana", "Южная Корея": "South Korea", "Кот-д'Ивуар": "Ivory Coast",
+        "Андорра": "Andorra", "Пакистан": "Pakistan", "Кипр": "Cyprus", "КНДР": "North Korea",
+        "Либерия": "Liberia", "Бутан": "Bhutan", "Чад": "Chad", "Багамы": "Bahamas", "Багамские острова": "Bahamas",
+        "Ямайка": "Jamaica", "Соломоновы острова": "Solomon Islands", "Центральноафриканская Республика": "CAR",
+        "Сьерра-Леоне": "Sierra Leone", "Мартиника": "Martinique"
+    },
+    cities: {
+        "Нью-Йорк": "New York", "Лас-Вегас": "Las Vegas", "Сан-Франциско": "San Francisco",
+        "Лос-Анджелес": "Los Angeles", "Барселона": "Barcelona", "Рим": "Rome", "Мадрид": "Madrid",
+        "Милан": "Milan", "Пномпень": "Phnom Penh", "Бангкок": "Bangkok", "Хошимин": "Ho Chi Minh City",
+        "Баку": "Baku", "Мехико": "Mexico City", "Гавана": "Havana", "Амстердам": "Amsterdam",
+        "Канкун": "Cancun", "Батуми": "Batumi", "Париж": "Paris", "Стамбул": "Istanbul",
+        "Берлин": "Berlin", "Афины": "Athens", "Дубай": "Dubai", "Катманду": "Kathmandu",
+        "Мумбаи": "Mumbai", "Чикаго": "Chicago", "Новый Орлеан": "New Orleans", "Даллас": "Dallas",
+        "Стокгольм": "Stockholm", "Пекин": "Beijing", "Гонконг": "Hong Kong", "Майами": "Miami",
+        "Манагуа": "Managua", "Бейрут": "Beirut", "Рио-де-Жанейро": "Rio de Janeiro", "Сантьяго": "Santiago",
+        "Сан-Паулу": "Sao Paulo", "Мачу-Пикчу": "Machu Picchu", "Буэнос-Айрес": "Buenos Aires",
+        "Куала-Лумпур": "Kuala Lumpur", "Санкт-Петербург": "Saint Petersburg", "Эдинбург": "Edinburgh",
+        "Найроби": "Nairobi", "Рига": "Riga", "Лондон": "London", "Копенгаген": "Copenhagen",
+        "Кейптаун": "Cape Town", "Алесунд": "Alesund", "Палермо": "Palermo", "Лазурный Берег": "French Riviera",
+        "Марракеш": "Marrakech", "Канарские острова": "Canary Islands", "Лиссабон": "Lisbon",
+        "Шанхай": "Shanghai", "Остров Бали": "Bali", "Швейцарские Альпы": "Swiss Alps", "Вена": "Vienna",
+        "Прага": "Prague", "Брюссель": "Brussels", "Венеция": "Venice", "Ла-Пас": "La Paz",
+        "Кито": "Quito", "Абу-Даби": "Abu Dhabi", "Анталия": "Antalya", "Корсика": "Corsica",
+        "Дубровник": "Dubrovnik", "Валенсия": "Valencia", "Крит": "Crete", "Минск": "Minsk",
+        "Вильнюс": "Vilnius", "Казань": "Kazan", "Одесса": "Odessa", "Таллин": "Tallinn",
+        "Иркутск": "Irkutsk", "Владивосток": "Vladivostok", "Камчатка": "Kamchatka", "Ереван": "Yerevan",
+        "Душанбе": "Dushanbe", "Бишкек": "Bishkek", "Алматы": "Almaty", "Калининград": "Kaliningrad",
+        "Львов": "Lviv", "Аддис-Абеба": "Addis Ababa", "Манила": "Manila", "Борнео": "Borneo",
+        "Ханой": "Hanoi", "Мельбурн": "Melbourne", "Окленд": "Auckland", "Сидней": "Sydney",
+        "Токио": "Tokyo", "Киото": "Kyoto", "Тайбэй": "Taipei", "Улан-Батор": "Ulaanbaatar",
+        "Гонолулу": "Honolulu", "Аляска": "Alaska", "Торонто": "Toronto", "Монреаль": "Montreal",
+        "Гренландия": "Greenland", "Богота": "Bogota", "Ушуайя": "Ushuaia", "Бордо": "Bordeaux",
+        "Франкфурт-на-Майне": "Frankfurt", "Нормандия": "Normandy", "Роттердам": "Rotterdam",
+        "Сараево": "Sarajevo", "Страна Басков": "Basque Country", "Сарагоса": "Zaragoza",
+        "Белград": "Belgrade", "Фарерские острова": "Faroe Islands", "Болонья": "Bologna",
+        "Краков": "Krakow", "Карпаты": "Carpathians", "Азорские острова": "Azores", "Глазго": "Glasgow",
+        "Дели": "Delhi", "Гуанчжоу": "Guangzhou", "Варанаси": "Varanasi", "Мандалай": "Mandalay",
+        "Луангпрабанг": "Luang Prabang", "Каир": "Cairo", "Пуэрто-Рико": "Puerto Rico",
+        "Неаполь": "Naples", "Вашингтон": "Washington", "Будапешт": "Budapest", "Сиэтл": "Seattle",
+        "Аризона": "Arizona", "Сан-Диего": "San Diego", "Дакар": "Dakar", "Мадейра": "Madeira",
+        "Орландо": "Orlando", "Бостон": "Boston", "Саванна": "Savannah", "Йеллоустон": "Yellowstone",
+        "Салоники": "Thessaloniki", "Осло": "Oslo", "Тирана": "Tirana", "Шпицберген": "Svalbard",
+        "Варшава": "Warsaw", "Трансильвания": "Transylvania", "Детройт": "Detroit", "Квебек": "Quebec",
+        "Рино": "Reno", "Мюнхен": "Munich", "Хельсинки": "Helsinki", "Манаус": "Manaus",
+        "Лима": "Lima", "Патагония": "Patagonia", "Антверпен": "Antwerp", "Дюссельдорф": "Dusseldorf",
+        "Флоренция": "Florence", "Йоханнесбург": "Johannesburg", "Хараре": "Harare", "Мапуту": "Maputo",
+        "Маскат": "Muscat", "Гоа": "Goa", "Бангалор": "Bangalore", "Покхара": "Pokhara",
+        "Дакка": "Dhaka", "Пхукет": "Phuket", "Чиангмай": "Chiang Mai", "Джакарта": "Jakarta",
+        "Хайнань": "Hainan", "Макао": "Macau", "Себу": "Cebu", "Хиросима": "Hiroshima",
+        "Осака": "Osaka", "Сайпан": "Saipan", "Таити": "Tahiti", "Ванкувер": "Vancouver",
+        "Сакраменто": "Sacramento", "Солт-Лейк-Сити": "Salt Lake City", "Гвадалахара": "Guadalajara",
+        "Акапулько": "Acapulco", "Гуаякиль": "Guayaquil", "Икитос": "Iquitos", "Атакама": "Atacama",
+        "Асунсьон": "Asuncion", "Монтевидео": "Montevideo", "Порту": "Porto", "Фес": "Fes",
+        "Кордова": "Cordoba", "Нант": "Nantes", "Момбаса": "Mombasa", "Калькутта": "Kolkata",
+        "Сан-Педро-Сула": "San Pedro Sula", "Кюрасао": "Curacao", "Каракас": "Caracas",
+        "Куинстаун": "Queenstown", "Новая Каледония": "New Caledonia", "Квинсленд": "Queensland",
+        "Лагос": "Lagos", "Аккра": "Accra", "Астана": "Astana", "Сеул": "Seoul", "Ибица": "Ibiza",
+        "Сардиния": "Sardinia", "Сплит": "Split", "Гамбург": "Hamburg", "Синтра": "Sintra",
+        "Прованс": "Provence", "Керала": "Kerala", "Ливерпуль": "Liverpool", "Ионические острова": "Ionian Islands",
+        "Виндхук": "Windhoek", "Пиза": "Pisa", "Бухарест": "Bucharest", "Абиджан": "Abidjan",
+        "Карачи": "Karachi", "Пхеньян": "Pyongyang", "Монровия": "Monrovia", "Гётеборг": "Gothenburg",
+        "Фритаун": "Freetown", "Нджамена": "N'Djamena", "Байкал": "Baikal", "Эс-Сувейра": "Essaouira",
+        "Севилья": "Seville", "Женева": "Geneva", "Грозный": "Grozny", "Крым": "Crimea",
+        "Кишинёв": "Chisinau", "Казань": "Kazan", "Сантьяго-де-Куба": "Santiago de Cuba",
+        "Банги": "Bangui"
+    }
+};
+    
 </script>
 
 </body>
