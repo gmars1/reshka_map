@@ -1,4 +1,4 @@
-import { geoDict, coord } from './data.js';
+import { geoDict, coordDict } from './data.js';
 
 /* ==================== MAP ==================== */
 
