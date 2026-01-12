@@ -1,29 +1,7 @@
 import { geoDict, coordDict } from './data.js';
 
-/* ==================== MAP ==================== */
 
-const map = L.map("map").setView([20, 0], 2);
-L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "© OpenStreetMap contributors"
-}).addTo(map);
 
-const markers = L.featureGroup().addTo(map);
-
-const statusEl = document.getElementById("status");
-const logEl = document.getElementById("log");
-
-/* ==================== API ==================== */
-
-const API_URL =
-    "https://cyclowiki.org/w/api.php?" +
-    new URLSearchParams({
-        action: "parse",
-        page: "Выпуски_телепередачи_«Орёл_и_решка»",
-        section: "2",
-        prop: "wikitext",
-        format: "json",
-        origin: "*"
-    });
 
 init();
 
@@ -44,93 +22,8 @@ async function init() {
     }
 }
 
-/* ==================== FETCH ==================== */
 
-async function fetchWiki() {
-    const res = await fetch(API_URL);
-    if (!res.ok) throw new Error("Ошибка API");
 
-    const data = await res.json();
-    if (!data?.parse?.wikitext?.["*"]) {
-        throw new Error("Некорректный ответ API");
-    }
-    return data.parse.wikitext["*"];
-}
-
-/* ==================== PARSER ==================== */
-
-function parseWiki(text) {
-    const episodes = [];
-    const blocks = text.split(/^===\s*(.+?)\s*===/m);
-
-    for (let i = 1; i < blocks.length; i += 2) {
-        const season = blocks[i].trim();
-        const content = blocks[i + 1];
-        if (!content) continue;
-
-        const tables = content.match(/\{\|[\s\S]*?\|\}/g) || [];
-        tables.forEach(table => {
-            table.split(/\n\|-/).forEach(row => {
-                const clean = row.trim();
-                if (!clean || clean.startsWith("!") || clean.includes("|}")) return;
-
-                const cells = clean
-                    .split(/\|\||(?<=\n)\|/)
-                    .map(c => c.trim())
-                    .filter(Boolean);
-
-                const idx = extractIndex(cells);
-                if (!idx) return;
-
-                const locations = extractLocations(cells);
-                if (!locations.length) return;
-
-                episodes.push({
-                    season,
-                    idx,
-                    location: locations.join("; ")
-                });
-            });
-        });
-    }
-    return episodes;
-}
-
-function extractIndex(cells) {
-    const bold = cells.join(" ").match(/'''([^']+)'''/);
-    if (bold) return bold[1].trim();
-    const fallback = cells[0].match(/\d+[\d\s()]+/);
-    return fallback ? fallback[0].trim() : null;
-}
-
-function extractLocations(cells) {
-    const out = [];
-
-    cells.forEach(cell => {
-        const flags = [...cell.matchAll(/\{\{[Фф]лаг\|([^}|]+)/g)]
-            .map(m => m[1].trim());
-
-        const links = cell.match(/\[\[([^|\]]+)(?:\|[^\]]+)?\]\]/g) || [];
-        const names = links
-            .map(l => l.replace(/[\[\]]/g, "").split("|").pop().trim())
-            .filter(n =>
-                n.length > 1 &&
-                !/^(Файл|File|Image|Категория):/i.test(n) &&
-                !/px/i.test(n)
-            );
-
-        if (!names.length) return;
-
-        const city = names[0];
-        const countries = flags.filter(f => f.toLowerCase() !== city.toLowerCase());
-        const prefix = [...new Set(countries)].join("/");
-
-        const label = prefix ? `${prefix}: ${city}` : city;
-        if (!out.includes(label)) out.push(label);
-    });
-
-    return out;
-}
 
 /* ==================== MAP PLOT ==================== */
 
@@ -159,44 +52,6 @@ async function plotEpisodes(episodes) {
     }
 }
 
-/* ==================== GEOCODE ==================== */
 
-async function geocode(name) {
-    const key = "geo_" + name;
-    const cached = coord.getItem(key);
-    if (cached) return JSON.parse(cached);
 
-    try {
-        const res = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(name)}&limit=1`,
-            { headers: { "User-Agent": "orel-reshka-map" } }
-        );
-        const data = await res.json();
-        if (data[0]) {
-            const coords = [+data[0].lat, +data[0].lon];
-            localStorage.setItem(key, JSON.stringify(coords));
-            return coords;
-        }
-    } catch {}
-    return null;
-}
-
-/* ==================== TRANSLATE ==================== */
-
-function translateLocation(ru) {
-    return ru.split(";").map(part =>
-        part.split(/[:\/]/).map(p =>
-            geoDict.countries[p.trim()] ||
-            geoDict.cities[p.trim()] ||
-            p.trim()
-        ).join(", ")
-    ).join(" | ");
-}
-
-/* ==================== UTILS ==================== */
-
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-function log(msg, cls) {
-    logEl.innerHTML = `<div class="${cls}">${msg}</div>` + logEl.innerHTML;
-}
 

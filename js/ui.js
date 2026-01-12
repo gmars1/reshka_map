@@ -1,4 +1,5 @@
-// elements.js
+
+
 export class UIManager {
     #statusEl = document.getElementById("status");
     #logEl = document.getElementById("log");
