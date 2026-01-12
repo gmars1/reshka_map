@@ -90,7 +90,7 @@ function extractLocations(cells) {
 export async function getCoordiantes(ruName) {
     const name = translateLocation(ruName);
     const key = "geo_" + name;
-    const cached = geoCoordDict.getItem(key) || getGeoCache(key);
+    const cached = geoCoordDict[key] || getGeoCache(key);
     if (cached) return JSON.parse(cached);
 
     return await fetchCoordiantes(name);
