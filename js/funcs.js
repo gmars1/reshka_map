@@ -27,10 +27,10 @@ export function parseWiki(text) {
                     .map(c => c.trim())
                     .filter(Boolean);
 
-                const idx = this.#extractIndex(cells);
+                const idx = extractIndex(cells);
                 if (!idx) return;
 
-                const locations = this.#extractLocations(cells);
+                const locations = extractLocations(cells);
                 if (!locations.length) return;
 
                 episodes.push({
@@ -93,13 +93,7 @@ export async function getCoordiantes(ruName) {
     const cached = geoCoordDict.getItem(key) || getGeoCache(key);
     if (cached) return JSON.parse(cached);
 
-    return fetchAndSetToCache(name);
-}
-
-function fetchAndSetToCache(name) {
-    const r = fetchCoordiantes(name);
-    addGeoCache(name, r);
-    return r;
+    return await fetchCoordiantes(name);
 }
 
 
