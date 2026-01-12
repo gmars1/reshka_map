@@ -1,19 +1,38 @@
-
-
 export class UIManager {
     #statusEl = document.getElementById("status");
     #logEl = document.getElementById("log");
+    #panelBody = document.getElementById("panelBody"); // Добавили тело панели
+    #toggleBtn = document.getElementById("toggleBtn"); // Добавили кнопку
     #map;
     #markers;
 
     constructor() {
-        // Инициализация карты
+        // 1. Инициализация карты
         this.#map = L.map("map").setView([20, 0], 2);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
             attribution: "© OpenStreetMap contributors"
         }).addTo(this.#map);
 
         this.#markers = L.featureGroup().addTo(this.#map);
+
+        // 2. Инициализация управления панелью
+        this.#initToggle();
+    }
+
+    #initToggle() {
+        const header = document.getElementById('panelHeader');
+        if (header) {
+            // Привязываем клик к методу класса
+            header.addEventListener('click', () => this.togglePanel());
+        }
+    }
+
+    togglePanel() {
+        // Если стиль display пустой (в начале), считаем что панель видна
+        const isHidden = this.#panelBody.style.display === 'none';
+        
+        this.#panelBody.style.display = isHidden ? 'block' : 'none';
+        this.#toggleBtn.innerText = isHidden ? '−' : '+';
     }
 
     updateStatus(text) {

@@ -5,6 +5,7 @@ import { getCoordiantes, translateLocation } from './js/funcs.js'
 
 
 const uiManager = new UIManager();
+
 init();
 
 /* ==================== INIT ==================== */

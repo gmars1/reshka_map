@@ -14,11 +14,17 @@
 <body>
 
     <div id="map"></div>
-    
-    <div class="panel">
-        <h2>Орёл и Решка</h2>
-        <div id="status">⏳ Загрузка данных…</div>
-        <div id="log" class="log"></div>
+
+    <div class="panel" id="mainPanel">
+        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" id="panelHeader">
+            <h2 style="margin:0">Орёл и Решка</h2>
+            <button id="toggleBtn" style="background:none; border:1px solid #ccc; cursor:pointer;">−</button>
+        </div>
+
+        <div id="panelBody">
+            <div id="status">⏳ Загрузка данных…</div>
+            <div id="log" class="log"></div>
+        </div>
     </div>
     
     
