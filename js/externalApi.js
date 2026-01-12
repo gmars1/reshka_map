@@ -38,5 +38,5 @@ export async function fetchCoordiantes(enName) {
             addGeoCache(key, JSON.stringify(coords));
             return coords;
         }
-    } catch {}
+    } catch {} 
 }
