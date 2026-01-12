@@ -1,0 +1,62 @@
+
+html, body {
+    margin: 0;
+    height: 100%;
+    font-family: system-ui, -apple-system, sans-serif;
+    background: #f0f2f5;
+}
+
+#map {
+    height: 100%;
+    width: 100%;
+}
+
+.panel {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 300px;
+    max-height: 85vh;
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 10px 25px rgba(0,0,0,.15);
+    overflow: auto;
+    z-index: 1000;
+}
+
+.panel h2 {
+    margin: 0 0 10px;
+    font-size: 18px;
+    color: #1877f2;
+}
+
+#status {
+    font-size: 13px;
+    margin-bottom: 10px;
+}
+
+.log {
+    font-size: 11px;
+    color: #555;
+    max-height: 200px;
+    overflow: auto;
+}
+
+footer.license {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    font-size: 11px;
+    color: #444;
+    background: rgba(255,255,255,0.92);
+    padding: 8px 12px;
+    border-radius: 10px;
+    text-align: center;
+    z-index: 1000;
+    box-shadow: 0 6px 16px rgba(0,0,0,.15);
+}
+    
+.ok { color: #2e7d32; }
+.err { color: #d32f2f; }
