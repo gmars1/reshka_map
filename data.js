@@ -114,7 +114,7 @@ const geoDict = {
 };
 
 
-const coord = {
+const coordDict = {
 	"geo_Albania, Tirana": [41.3281482,19.8184435],	
 	"geo_Argentina, Buenos Aires": [-34.6095579,-58.3887904],	
 	"geo_Argentina, Patagonia": [-51.6538867,-69.2921939],	
