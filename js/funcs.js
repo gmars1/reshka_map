@@ -1,7 +1,7 @@
 
 import {geoTranslateDict, geoCoordDict} from './data.js'
 import {getGeoCache, addGeoCache} from './cache.js'
-import {fetchCoordiantes} from './exterenalApi.js'
+import {fetchCoordiantes} from './externalApi.js'
 
 // ------------
 
