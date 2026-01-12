@@ -1,7 +1,7 @@
 import { fetchWiki } from './js/externalApi.js'
 import { parseWiki } from './js/funcs.js'
 import { UIManager } from './js/ui.js';
-import { getCoordiantes } from './js/funcs.js'
+import { getCoordiantes, translateLocation } from './js/funcs.js'
 
 
 const uiManager = new UIManager();
@@ -14,7 +14,7 @@ async function init() {
         const wikiText = await fetchWiki();
         const episodes = parseWiki(wikiText);
         await plotEpisodes(episodes);
-        uiManager.updateStatus(`✅ Точек на карте: ${markers.getLayers().length}`);
+        uiManager.updateStatus(`✅ Точек на карте: ${uiManager.markerCount}`);
         uiManager.fitMap();
     } catch (e) {
         uiManager.updateStatus("❌ " + e.message);
@@ -32,8 +32,9 @@ async function plotEpisodes(episodes) {
 
     for (let i = 0; i < episodes.length; i++) {
         const ep = episodes[i];
-        const coords = await getCoordiantes(ep.location);
-        await sleep(1000);
+        const en = translateLocation(ep.location);
+        const coords = await getCoordiantes(en);
+        await sleep(300);
 
         if (coords) {
             uiManager.addMarker(coords, `<b>${ep.idx}</b><br>${ep.location}<br><i>${en}</i>`);
@@ -46,6 +47,8 @@ async function plotEpisodes(episodes) {
     }
 }
 
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 
 

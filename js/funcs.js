@@ -86,19 +86,24 @@ function extractLocations(cells) {
 
 //-------
 
+let networkQueue = Promise.resolve();
 
-export async function getCoordiantes(ruName) {
-    const name = translateLocation(ruName);
+export async function getCoordiantes(name) {
     const key = "geo_" + name;
     const cached = geoCoordDict[key] || getGeoCache(key);
-    if (cached) return JSON.parse(cached);
+    if (cached) return cached;
 
-    return await fetchCoordiantes(name);
+    networkQueue = networkQueue.then(async () => {
+        await new Promise(resolve => setTimeout(resolve, 1100));
+        return await fetchCoordiantes(name);
+    });
+
+    return await networkQueue;
 }
 
 
 
-function translateLocation(ru) {
+export function translateLocation(ru) {
     return ru.split(";").map(part =>
         part.split(/[:\/]/).map(p =>
             geoTranslateDict.countries[p.trim()] ||
