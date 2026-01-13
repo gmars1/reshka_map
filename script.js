@@ -1,7 +1,10 @@
-import { geoDict, coordDict } from './data.js';
+import { fetchWiki } from './js/externalApi.js'
+import { parseWiki } from './js/funcs.js'
+import { UIManager } from './js/ui.js';
+import { getCoordiantes, translateLocation } from './js/funcs.js'
 
 
-
+const uiManager = new UIManager();
 
 init();
 
@@ -12,12 +15,10 @@ async function init() {
         const wikiText = await fetchWiki();
         const episodes = parseWiki(wikiText);
         await plotEpisodes(episodes);
-        statusEl.textContent = `✅ Точек на карте: ${markers.getLayers().length}`;
-        if (markers.getLayers().length) {
-            map.fitBounds(markers.getBounds().pad(0.15));
-        }
+        uiManager.updateStatus(`✅ Точек на карте: ${uiManager.markerCount}`);
+        uiManager.fitMap();
     } catch (e) {
-        statusEl.textContent = "❌ " + e.message;
+        uiManager.updateStatus("❌ " + e.message);
         console.error(e);
     }
 }
@@ -28,30 +29,27 @@ async function init() {
 /* ==================== MAP PLOT ==================== */
 
 async function plotEpisodes(episodes) {
-    statusEl.textContent = `Найдено выпусков: ${episodes.length}`;
+    uiManager.updateStatus(`Найдено выпусков: ${episodes.length}`);
 
     for (let i = 0; i < episodes.length; i++) {
         const ep = episodes[i];
         const en = translateLocation(ep.location);
-        const coords = await geocode(en);
+        const coords = await getCoordiantes(en);
+        await sleep(300);
 
         if (coords) {
-            L.marker(coords)
-                .bindPopup(`<b>${ep.idx}</b><br>${ep.location}<br><i>${en}</i>`)
-                .addTo(markers);
-
-            log(`✔ ${en}`, "ok");
+            uiManager.addMarker(coords, `<b>${ep.idx}</b><br>${ep.location}<br><i>${en}</i>`);
+            uiManager.addLog(`✔ ${en}`, "ok");
         } else {
-            log(`✖ ${en}`, "err");
+            uiManager.addLog(`✖ ${en}`, "err");
         }
 
-        statusEl.textContent = `Обработано ${i + 1} / ${episodes.length}`;
-        if (!localStorage.getItem("geo_" + en)) {
-            await sleep(1000);
-        }
+        uiManager.updateStatus(`Обработано ${i + 1} / ${episodes.length}`);
     }
 }
 
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 
 

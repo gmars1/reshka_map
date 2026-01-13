@@ -10,6 +10,7 @@ export function getGeoCache(key) {
     const cached = cache.getItem(key)
     if(cached) return JSON.parse(cached);
 
-    return null;
+    return null; 
 }
+
 

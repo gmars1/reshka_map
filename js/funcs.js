@@ -1,7 +1,7 @@
 
 import {geoTranslateDict, geoCoordDict} from './data.js'
 import {getGeoCache, addGeoCache} from './cache.js'
-import {fetchCoordiantes} from './exterenalApi.js'
+import {fetchCoordiantes} from './externalApi.js'
 
 // ------------
 
@@ -27,10 +27,10 @@ export function parseWiki(text) {
                     .map(c => c.trim())
                     .filter(Boolean);
 
-                const idx = this.#extractIndex(cells);
+                const idx = extractIndex(cells);
                 if (!idx) return;
 
-                const locations = this.#extractLocations(cells);
+                const locations = extractLocations(cells);
                 if (!locations.length) return;
 
                 episodes.push({
@@ -86,25 +86,24 @@ function extractLocations(cells) {
 
 //-------
 
+let networkQueue = Promise.resolve();
 
-export async function getCoordiantes(ruName) {
-    const name = translateLocation(ruName);
+export async function getCoordiantes(name) {
     const key = "geo_" + name;
-    const cached = geoCoordDict.getItem(key) || getGeoCache(key);
-    if (cached) return JSON.parse(cached);
+    const cached = geoCoordDict[key] || getGeoCache(key);
+    if (cached) return cached;
 
-    return fetchAndSetToCache(name);
+    networkQueue = networkQueue.then(async () => {
+        await new Promise(resolve => setTimeout(resolve, 1100));
+        return await fetchCoordiantes(name);
+    });
+
+    return await networkQueue;
 }
 
-function fetchAndSetToCache(name) {
-    const r = fetchCoordiantes(name);
-    addGeoCache(name, r);
-    return r;
-}
 
 
-
-function translateLocation(ru) {
+export function translateLocation(ru) {
     return ru.split(";").map(part =>
         part.split(/[:\/]/).map(p =>
             geoTranslateDict.countries[p.trim()] ||

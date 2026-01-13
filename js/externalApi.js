@@ -1,4 +1,4 @@
-
+import {addGeoCache} from './cache.js'
 
 const API_URL = "https://cyclowiki.org/w/api.php?" +
 new URLSearchParams({
@@ -29,14 +29,14 @@ export async function fetchWiki() {
 export async function fetchCoordiantes(enName) {
     try {
         const res = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(name)}&limit=1`,
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(enName)}&limit=1`,
             { headers: { "User-Agent": "orel-reshka-map" } }
         );
         const data = await res.json();
         if (data[0]) {
             const coords = [+data[0].lat, +data[0].lon];
-            localStorage.setItem(key, JSON.stringify(coords));
+            addGeoCache(key, JSON.stringify(coords));
             return coords;
         }
-    } catch {}
+    } catch {} 
 }
