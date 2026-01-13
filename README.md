@@ -5,7 +5,7 @@
 
 ## Источники данных
 
-Данные получены автоматически через MediaWiki API со страницы Cyclowiki:  
+Данные получены через MediaWiki API со страницы Cyclowiki:  
 https://cyclowiki.org/wiki/Выпуски_телепередачи_«Орёл_и_решка»
 
 Текст страницы доступен по лицензиям:
@@ -22,7 +22,8 @@ https://cyclowiki.org/wiki/Выпуски_телепередачи_«Орёл_и
 ## Атрибуция
 
 © OpenStreetMap contributors  
-Геокодирование: Nominatim
+Поиск координат: Nominatim
+
 
 ## Правовой статус
 
