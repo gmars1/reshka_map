@@ -2,7 +2,7 @@
   + dao: 
     + cache.js - функции для работы с кешом 
     + data.js - словари: переводы, координыты
-    + externalApi.js - доступ к внешнему Api
+    + externalApi.js - доступ к внешним Api
 + service:
   + funcs.js — сервисные функции
 + view:
