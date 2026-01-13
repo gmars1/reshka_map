@@ -27,17 +27,23 @@ export function parseWiki(text) {
                     .map(c => c.trim())
                     .filter(Boolean);
 
+                if (cells.length < 2) return;
+
                 const idx = extractIndex(cells);
-                if (!idx) return;
-
                 const locations = extractLocations(cells);
-                if (!locations.length) return;
 
-                episodes.push({
+                if (!idx || locations.length === 0) return;
+
+                const episodeData = {
                     season,
                     idx,
-                    location: locations.join("; ")
-                });
+                    location: locations.join("; "),
+                    currency: cleanWiki(cells[2] || "—"),
+                    goldCard: cleanWiki(cells[3] || "—"),
+                    premiere: cleanWiki(cells[4] || "—")
+                };
+
+                episodes.push(episodeData);
             });
         });
     }
@@ -45,37 +51,62 @@ export function parseWiki(text) {
 }
 
 
+function cleanWiki(str) {
+    if (!str) return "";
+
+    return str
+        .replace(/\{\{[^}]+\}\}/g, "")                     // {{Флаг|...}}
+        .replace(/\[\[(?:[^|\]]*\|)?([^\]]+)\]\]/g, "$1") // [[A|B]] → B
+        .replace(/\d+px/gi, "")                            // 25px
+        .replace(/'''/g, "")                               // жирный
+        .replace(/<[^>]+>/g, "")                           // HTML
+        .replace(/\s{2,}/g, " ")
+        .trim();
+}
+
+
 function extractIndex(cells) {
     const bold = cells.join(" ").match(/'''([^']+)'''/);
     if (bold) return bold[1].trim();
-    const fallback = cells[0].match(/\d+[\d\s()]+/);
-    return fallback ? fallback[0].trim() : null;
+
+    const fallback = cells[0].match(/\d+\s*\(\d+\)/);
+    return fallback ? fallback[0] : null;
 }
 
 
 function extractLocations(cells) {
     const out = [];
 
-    cells.forEach(cell => {
+    cells.slice(1).forEach(cell => {
+        // Флаги
         const flags = [...cell.matchAll(/\{\{[Фф]лаг\|([^}|]+)/g)]
             .map(m => m[1].trim());
 
-        const links = cell.match(/\[\[([^|\]]+)(?:\|[^\]]+)?\]\]/g) || [];
-        const names = links
-            .map(l => l.replace(/[\[\]]/g, "").split("|").pop().trim())
-            .filter(n =>
-                n.length > 1 &&
-                !/^(Файл|File|Image|Категория):/i.test(n) &&
-                !/px/i.test(n)
+        // Ссылки
+        const names = [...cell.matchAll(/\[\[([^\]]+)\]\]/g)]
+            .map(m => {
+                const content = m[1];
+                return content.includes("|")
+                    ? content.split("|").pop().trim()
+                    : content.trim();
+            })
+            .filter(name =>
+                name.length > 1 &&
+                !/^(Файл|File|Image|Категория):/i.test(name) &&
+                !/\.(svg|png|jpg)$/i.test(name)
             );
 
         if (!names.length) return;
 
-        const city = names[0];
-        const countries = flags.filter(f => f.toLowerCase() !== city.toLowerCase());
-        const prefix = [...new Set(countries)].join("/");
+        let city = names[names.length - 1];
+        let country = flags[0] || (names.length > 1 ? names[0] : null);
 
-        const label = prefix ? `${prefix}: ${city}` : city;
+        city = city.replace(/\s*\(.+?\)$/, "");
+
+        const label = country && country !== city
+            ? `${country}: ${city}`
+            : city;
+
         if (!out.includes(label)) out.push(label);
     });
 
