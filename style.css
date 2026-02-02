@@ -62,13 +62,19 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
 @media (max-width: 600px) {
     .legend {
         top: 10px;
-        left: 70px; /* Прижали к левому краю */
-        width: auto; /* Ограничили ширину (можешь поставить px, например 200px) */
-        max-width: auto; /* Чтобы на больших телефонах не была слишком широкой */
-        max-height: 30vh; /* ОГРАНИЧЕНИЕ ВЫСОТЫ: 40% от высоты экрана */
+        right: 10px;
+        /* Используем vh для ширины, но добавляем min-width, 
+           чтобы на узких экранах текст не превращался в кашу */
+        min-width: 160px; 
+        max-width: 280px;
+        
+        /* Ограничиваем высоту, чтобы не перекрывать пол-экрана */
+        max-height: 45vh; 
+        
         transform: none;
         display: flex;
         flex-direction: column;
+        overflow: hidden; /* Чтобы скругленные углы не резались контентом */
     }
 
     .legend.collapsed {
