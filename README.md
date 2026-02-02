@@ -53,7 +53,7 @@ cd reshka_map
 
 you can make changes in settings file - `./settings.js` (if you want fetch fresh data from wiki, for example)
 
-run server - `py -m http.server 8000` (you have to have python in your system)
+run server - `py -m http.server 8000` (you have to have python on your system)
 
 go to `http://localhost:8000/`
 
