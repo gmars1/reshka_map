@@ -15,7 +15,7 @@ export class UIManager {
         this.#legendBody = document.getElementById("legendBody");
         this.#arrow = document.querySelector('.arrow-icon');
 
-        this.#generateSeasonColors(36, 20);
+        this.#generateSeasonColors(36, 40);
 
         this.#map = L.map("map").setView([20, 0], 2);
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
