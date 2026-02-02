@@ -20,6 +20,7 @@ async function init() {
         const uniqueSeasons = [...new Set(episodes.map(ep => ep.season))];
         uiManager.createLegend(uniqueSeasons);
         uiManager.collapseLegend();
+        uiManager.setLegendState(true);
 
     } catch (e) {
         uiManager.updateStatus("❌ " + e.message);

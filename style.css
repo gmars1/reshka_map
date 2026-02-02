@@ -28,18 +28,38 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
 /* ЛЕГЕНДА СЛЕВА ПО ЦЕНТРУ */
 .legend {
     right: 12px; 
-    top: 10%; /* Возвращаем центр */
-    transform: translateY(-50%);
+    top: 20px; /* Фиксированный отступ сверху */
     width: 220px; 
-    max-height: 70vh; /* Увеличил, чтобы больше сезонов влезало */
+    
+    /* ОГРАНИЧЕНИЕ ВЫСОТЫ */
+    max-height: 60vh; /* Теперь она не будет длиннее этого значения */
+    
     display: flex; 
     flex-direction: column;
+    transform: none; /* Убираем центрирование, чтобы верх не улетал */
 }
 
-/* Обязательно добавляем это, чтобы свернутая легенда не прыгала */
 .legend.collapsed { 
-    max-height: 44px; 
-    transform: translateY(-50%); 
+    max-height: 48px; /* Высота только заголовка */
+}
+
+.legend-body { 
+    padding: 0 12px 12px; 
+    overflow-y: auto; /* Включает внутреннюю прокрутку */
+    flex: 1; 
+    
+    /* Настройка скроллбара (опционально, для красоты) */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,0,0,0.2) transparent;
+}
+
+/* Стили для скроллбара в Chrome/Safari */
+.legend-body::-webkit-scrollbar {
+    width: 4px;
+}
+.legend-body::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.2);
+    border-radius: 10px;
 }
 
 .legend-header, .panel-header {

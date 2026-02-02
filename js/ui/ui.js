@@ -89,6 +89,15 @@ export class UIManager {
         }
     }
 
+    setLegendState(open = true) {
+        const isCollapsed = !open;
+        this.#legendEl.classList.toggle('collapsed', isCollapsed);
+        this.#legendBody.hidden = isCollapsed;
+        if (this.#arrow) {
+            this.#arrow.textContent = isCollapsed ? '▸' : '▾';
+        }
+    }
+
     updateStatus(text) { if (this.#statusEl) this.#statusEl.textContent = text; }
     
     addLog(msg, type) {
