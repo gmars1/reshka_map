@@ -28,7 +28,7 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
 /* ЛЕГЕНДА СЛЕВА ПО ЦЕНТРУ */
 .legend {
     right: 12px; 
-    top: 35%; /* Возвращаем центр */
+    top: 10%; /* Возвращаем центр */
     transform: translateY(-50%);
     width: 220px; 
     max-height: 70vh; /* Увеличил, чтобы больше сезонов влезало */
@@ -55,6 +55,8 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
     bottom: 40px; 
     width: 300px; 
     max-height: 25vh; /* Ограничиваем панель логов на десктопе */
+    min-width: 100px;
+    max-width: 400px;
     display: flex;
     flex-direction: column;
 }
@@ -62,9 +64,13 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
 .panel-body { overflow-y: auto; flex: 1; }
 
 .license {
-    position: fixed; bottom: 0; width: 100%; text-align: center;
+    position: fixed; bottom: 5px; width: 100%; text-align: center;
     font-size: 10px; padding: 5px; z-index: 500; background: rgba(255,255,255,0.5);
+    min-width: 200px;
+    max-height: 80px;
 }
+
+
 
 .legend-item { display: flex; align-items: center; margin-bottom: 5px; font-size: 13px; }
 
@@ -97,12 +103,13 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
         overflow-y: auto; 
         flex: 1; /* Занимает всё оставшееся место в пределах max-height */
     }
+}
 
+@media (max-width: 850px) {
     .panel { 
         right: 10px; 
-        left: 10px; 
         width: auto; 
-        bottom: 80px; /* Поднимаем чуть выше футера */
+        bottom: 90px; /* Поднимаем чуть выше футера */
         max-height: 25vh; /* Максимум 25% высоты экрана */
     }
 
