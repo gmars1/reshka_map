@@ -40,3 +40,20 @@
 - **Точность данных:** Информация предоставлена исключительно в ознакомительных целях. Данные (координаты, названия, даты) **могут содержать неточности или ошибки**. 
 
 
+---
+
+
+### if you want to run local:
+
+```
+git clone https://github.com/gmars1/reshka_map.git
+
+cd reshka_map
+```
+
+you can make changes in settings file - `./settings.js` (if you want fetch fresh data from wiki, for example)
+
+run server - `py -m http.server 8000` (you have to have python in your system)
+
+go to `http://localhost:8000/`
+

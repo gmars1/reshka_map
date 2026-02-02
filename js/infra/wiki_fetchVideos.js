@@ -1,3 +1,5 @@
+import {responseFromWiki} from "../data/response_from_wiki.js";
+
 
 //const API_URL = "https://ru.wikipedia.org/w/index.php?" +
 //new URLSearchParams({
@@ -92,7 +94,11 @@ async function fetchWikiWikitext({
 //    return data.parse.wikitext["*"];
 //}
 
-export async function fetchWiki() {
+export async function fetchWiki({useData=true}) {
+    if(useData){
+        return responseFromWiki;
+    }
+
     try {
         const wikiText = await fetchWikiWikitext({
             page: "Орёл_и_решка_(телепередача)",

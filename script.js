@@ -1,13 +1,14 @@
 import { fetchWiki } from './js/infra/wiki_fetchVideos.js';
 import { parseWiki, getCoordiantes } from './js/services/funcs.js';
 import { UIManager } from './js/ui/ui.js';
+import {fetchFromRealWiki} from './settings.js';
 
 const uiManager = new UIManager();
 init();
 
 async function init() {
     try {
-        const wikiText = await fetchWiki();
+        const wikiText = await fetchWiki({useData: !fetchFromRealWiki});
         const episodes = parseWiki(wikiText);
 
         await plotEpisodes(episodes);
