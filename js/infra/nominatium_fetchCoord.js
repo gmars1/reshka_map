@@ -18,8 +18,14 @@ export async function fetchCoordiantes(ruName) {
 
         const res = await fetch(
             `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(ruName)}&limit=1`,
-            { headers: { "User-Agent": "orel-reshka-map" } }
+            {   method: 'GET',
+                mode: 'cors', 
+                headers: { "User-Agent": "orel-reshka-map" },
+                referrerPolicy: "no-referrer"
+             }
         );
+
+        if (!res.ok) throw new Error(`Ошибка: ${res.status}`);
 
         const data = await res.json();
 

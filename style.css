@@ -50,7 +50,16 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
 .legend-body, .panel-body { padding: 0 12px 12px; overflow-y: auto; }
 
 /* ПАНЕЛЬ СПРАВА СНИЗУ */
-.panel { right: 12px; bottom: 40px; width: 300px; }
+.panel { 
+    right: 12px; 
+    bottom: 40px; 
+    width: 300px; 
+    max-height: 25vh; /* Ограничиваем панель логов на десктопе */
+    display: flex;
+    flex-direction: column;
+}
+
+.panel-body { overflow-y: auto; flex: 1; }
 
 .license {
     position: fixed; bottom: 0; width: 100%; text-align: center;
@@ -89,5 +98,15 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
         flex: 1; /* Занимает всё оставшееся место в пределах max-height */
     }
 
-    .panel { right: 10px; left: 10px; width: auto; bottom: 90px; }
+    .panel { 
+        right: 10px; 
+        left: 10px; 
+        width: auto; 
+        bottom: 80px; /* Поднимаем чуть выше футера */
+        max-height: 25vh; /* Максимум 25% высоты экрана */
+    }
+
+    .panel-body {
+        max-height: 20vh; /* Ограничиваем высоту логов внутри */
+    }
 }
