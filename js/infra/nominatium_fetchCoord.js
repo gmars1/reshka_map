@@ -20,7 +20,7 @@ export async function fetchCoordiantes(ruName) {
             `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(ruName)}&limit=1`,
             {   method: 'GET',
                 mode: 'cors', 
-                headers: { "User-Agent": "orel-reshka-map" },
+                headers: { "User-Agent": "orel-reshka-map-2" },
                 referrerPolicy: "no-referrer"
              }
         );
