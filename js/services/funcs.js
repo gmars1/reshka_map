@@ -1,7 +1,7 @@
 
-import {geoTranslateDict, geoCoordDict} from './data.js'
-import {getGeoCache, addGeoCache} from './cache.js'
-import {fetchCoordiantes} from './externalApi.js'
+import {geoRuUsTranslateDict} from '../data/countryCityDict.js'
+import {geoRuCoordDict} from '../data/coordDict.js'
+import { fetchCoordiantes } from "../infra/nominatium_fetchCoord.js";
 
 // ------------
 
@@ -115,17 +115,29 @@ function extractLocations(cells) {
 
 
 
+// return iterator over videos 
+export async function getVideos() {
+    
+}
+
+// export async function getCoordiantesBatched(ruNames) {
+
+// }
+
+
 //-------
 
 let networkQueue = Promise.resolve();
 
+
+// check in data
+// fetchWithCache  
 export async function getCoordiantes(name) {
-    const key = "geo_" + name;
-    const cached = geoCoordDict[key] || getGeoCache(key);
-    if (cached) return cached;
+    const fromData = geoRuCoordDict[name];
+    if (fromData) return fromData;
 
     networkQueue = networkQueue.then(async () => {
-        await new Promise(resolve => setTimeout(resolve, 1100));
+        await new Promise(resolve => setTimeout(resolve, 100));
         return await fetchCoordiantes(name);
     });
 
@@ -137,8 +149,8 @@ export async function getCoordiantes(name) {
 export function translateLocation(ru) {
     return ru.split(";").map(part =>
         part.split(/[:\/]/).map(p =>
-            geoTranslateDict.countries[p.trim()] ||
-            geoTranslateDict.cities[p.trim()] ||
+            geoRuUsTranslateDict.countries[p.trim()] ||
+            geoRuUsTranslateDict.cities[p.trim()] ||
             p.trim()
         ).join(", ")
     ).join(" | ");

@@ -6,19 +6,26 @@
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     
-    <link rel="stylesheet" href="style.css"></link>
+    <!-- Основной стиль -->
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
+    <!-- Карта -->
     <div id="map"></div>
 
+    <!-- Легенда сезонов (отдельно, поверх карты) -->
+    <div id="legend" class="legend"></div>
+
+    <!-- Панель с логами -->
     <div class="panel" id="mainPanel">
-        <div class="panel-header" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" id="panelHeader">
-            <h2 style="margin:0">Орёл и Решка</h2>
-            <button id="toggleBtn" style="background:none; border:1px solid #ccc; cursor:pointer;">−</button>
+        <div class="panel-header" id="panelHeader">
+            <h2>Орёл и Решка</h2>
+            <button id="toggleBtn">−</button>
         </div>
 
         <div id="panelBody">
@@ -26,13 +33,14 @@
             <div id="log" class="log"></div>
         </div>
     </div>
-    
-    
-    
+
+    <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
+
+    <!-- Основной скрипт -->
     <script src="script.js" type="module"></script>
-    
+
+    <!-- Футер с лицензиями -->
     <footer class="license">
         <div>
             Данные выпусков получены автоматически через MediaWiki API<br>
@@ -46,7 +54,7 @@
                 CC BY-SA 4.0
             </a>
         </div>
-    
+
         <div style="margin-top:6px">
             Карта: © 
             <a href="https://www.openstreetmap.org/copyright" target="_blank">
@@ -57,12 +65,11 @@
                 Nominatim
             </a>
         </div>
-    
+
         <div style="margin-top:6px; font-size:10px; opacity:.7">
             Проект не является официальным сайтом телепередачи
         </div>
     </footer>
-
 
 </body>
 </html>
