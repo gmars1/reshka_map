@@ -16,6 +16,15 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
     transition: all 0.3s ease;
 }
 
+.legend-item:hover {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+}
+
+.legend-item span:first-child {
+    flex-shrink: 0; /* Чтобы кружок не сплющивался */
+}
+
 /* ЛЕГЕНДА СЛЕВА ПО ЦЕНТРУ */
 .legend {
     right: 12px; 
@@ -51,7 +60,28 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
 .legend-item { display: flex; align-items: center; margin-bottom: 5px; font-size: 13px; }
 
 @media (max-width: 600px) {
-    .legend { top: 10px; left: 50px; right: 10px; width: auto; transform: none; }
-    .legend.collapsed { transform: none; }
+    .legend {
+        top: 10px;
+        left: 70px; /* Прижали к левому краю */
+        width: auto; /* Ограничили ширину (можешь поставить px, например 200px) */
+        max-width: auto; /* Чтобы на больших телефонах не была слишком широкой */
+        max-height: 30vh; /* ОГРАНИЧЕНИЕ ВЫСОТЫ: 40% от высоты экрана */
+        transform: none;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .legend.collapsed {
+        transform: none;
+        max-height: auto; /* Высота только хедера в свернутом виде */
+        width: auto; /* Можно даже сузить ее, когда она закрыта */
+    }
+
+    /* Обязательно добавь это, чтобы внутри работал скролл */
+    .legend-body {
+        overflow-y: auto; 
+        flex: 1; /* Занимает всё оставшееся место в пределах max-height */
+    }
+
     .panel { right: 10px; left: 10px; width: auto; bottom: 90px; }
 }

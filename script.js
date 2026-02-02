@@ -63,7 +63,7 @@ async function plotEpisodes(episodes) {
             `;
 
             const season = parseSeason(ep.season);
-            uiManager.addMarker(coords, content, season, escapeHtml(ep.season), escapeHtml(idx.inSeason));
+            uiManager.addMarker(coords, content, ep.season, idx.inSeason);
 
         } catch (e) {
             console.error("Episode failed:", ep.location, e);
