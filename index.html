@@ -11,26 +11,29 @@
 
     <main id="map" class="map-container"></main>
 
-    <section id="legend" class="legend collapsed">
-        <div id="legendHeader" class="legend-header">
-            <span id="legendTitle">Фильтр сезонов</span>
-            <button id="legendArrow" class="legend-arrow">
-                <span class="arrow-icon">▾</span>
-            </button>
-        </div>
-        <div id="legendBody" class="legend-body" hidden></div>
-    </section>
+    <div class="side-controls">
+        <section id="legend" class="legend collapsed">
+            <div id="legendHeader" class="legend-header">
+                <span id="legendTitle">Фильтр сезонов</span>
+                <button id="legendArrow" class="legend-arrow">
+                    <span class="arrow-icon">▾</span>
+                </button>
+            </div>
+            <div id="legendBody" class="legend-body" hidden></div>
+        </section>
 
-    <aside id="mainPanel" class="panel">
-        <header id="panelHeader" class="panel-header">
-            <span id="panelHeading">Панель уведомлений</span>
-            <button id="toggleBtn" class="panel-toggle">−</button>
-        </header>
-        <div id="panelBody" class="panel-body">
-            <div id="status" class="status-indicator">⏳ Загрузка данных…</div>
-            <div id="log" class="log-container"></div>
-        </div>
-    </aside>
+        <aside id="mainPanel" class="panel">
+            <header id="panelHeader" class="panel-header">
+                <span id="panelHeading">Панель уведомлений</span>
+                <button id="toggleBtn" class="panel-toggle">−</button>
+            </header>
+            <div id="panelBody" class="panel-body">
+                <div id="status" class="status-indicator">⏳ Загрузка данных…</div>
+                <div id="log" class="log-container"></div>
+            </div>
+        </aside>
+    </div>
+
 
     <footer id="mainFooter" class="license" role="contentinfo">
         <div class="footer-section">

@@ -6,134 +6,109 @@
 }
 
 html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overflow: hidden; }
-
 #map { position: absolute; inset: 0; z-index: 1; }
 
+.side-controls {
+    position: fixed;
+    right: 12px;
+    top: 20px;
+    bottom: 90px; /* Барьер для футера */
+    width: 280px;
+    display: flex;
+    flex-direction: column;
+    /* Убираем justify-content: flex-end, возвращаем стандарт */
+    justify-content: flex-start; 
+    gap: 12px;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.legend {
+    flex: 0 1 auto;
+    max-height: 45vh;
+    pointer-events: auto;
+    
+    /* МАГИЯ ЗДЕСЬ: */
+    /* Этот маржин заберет всё пустое место между легендой и панелью */
+    margin-bottom: auto; 
+}
+
+.panel {
+    flex: 0 1 auto;
+    max-height: 30vh;
+    pointer-events: auto;
+    /* Панель теперь всегда будет прижата к bottom: 90px контейнера */
+}
+
+/* ОБЩИЕ СТИЛИ ДЛЯ ОБЕИХ ПАНЕЛЕЙ */
 .legend, .panel {
-    position: fixed; z-index: 1000;
-    background: var(--bg); backdrop-filter: var(--blur);
-    border-radius: var(--radius); box-shadow: var(--shadow);
+    background: var(--bg);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    pointer-events: auto; /* Возвращаем кликабельность */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     transition: all 0.3s ease;
 }
 
-.legend-item:hover {
-    background: rgba(0, 0, 0, 0.05);
-    border-radius: 4px;
+
+
+/* Когда панель развернута, но пуста или в ней мало текста */
+.panel:not(.collapsed) {
+    height: auto; 
 }
 
-.legend-item span:first-child {
-    flex-shrink: 0; /* Чтобы кружок не сплющивался */
+.panel.collapsed {
+    flex: 0 0 48px; /* Жестко фиксируем высоту заголовка */
+    max-height: 48px;
 }
 
-/* ЛЕГЕНДА СЛЕВА ПО ЦЕНТРУ */
-.legend {
-    right: 12px; 
-    top: 20px; /* Фиксированный отступ сверху */
-    width: 220px; 
-    
-    /* ОГРАНИЧЕНИЕ ВЫСОТЫ */
-    max-height: 60vh; /* Теперь она не будет длиннее этого значения */
-    
-    display: flex; 
-    flex-direction: column;
-    transform: none; /* Убираем центрирование, чтобы верх не улетал */
-}
+/* Состояния свернутости */
+.legend.collapsed { max-height: 48px; flex: 0 0 48px; }
+.panel.collapsed { max-height: 48px; flex: 0 0 48px; }
 
-.legend.collapsed { 
-    max-height: 48px; /* Высота только заголовка */
-}
-
-.legend-body { 
-    padding: 0 12px 12px; 
-    overflow-y: auto; /* Включает внутреннюю прокрутку */
-    flex: 1; 
-    
-    /* Настройка скроллбара (опционально, для красоты) */
-    scrollbar-width: thin;
-    scrollbar-color: rgba(0,0,0,0.2) transparent;
-}
-
-/* Стили для скроллбара в Chrome/Safari */
-.legend-body::-webkit-scrollbar {
-    width: 4px;
-}
-.legend-body::-webkit-scrollbar-thumb {
-    background: rgba(0,0,0,0.2);
-    border-radius: 10px;
-}
-
+/* ВНУТРЕННОСТИ */
 .legend-header, .panel-header {
-    padding: 12px; cursor: pointer; display: flex; 
-    justify-content: space-between; align-items: center;
-}
-
-.legend-body, .panel-body { padding: 0 12px 12px; overflow-y: auto; }
-
-/* ПАНЕЛЬ СПРАВА СНИЗУ */
-.panel { 
-    right: 12px; 
-    bottom: 40px; 
-    width: 300px; 
-    max-height: 25vh; /* Ограничиваем панель логов на десктопе */
-    min-width: 100px;
-    max-width: 400px;
+    padding: 12px;
+    cursor: pointer;
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
 }
 
-.panel-body { overflow-y: auto; flex: 1; }
+.legend-body, .panel-body {
+    padding: 0 12px 12px;
+    overflow-y: auto;
+    flex: 1;
+}
 
+/* ЛИЦЕНЗИЯ (ФУТЕР) */
 .license {
-    position: fixed; bottom: 5px; width: 100%; text-align: center;
-    font-size: 10px; padding: 5px; z-index: 500; background: rgba(255,255,255,0.5);
-    min-width: 200px;
-    max-height: 80px;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    font-size: 10px;
+    padding: 8px 0;
+    z-index: 500;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(5px);
 }
 
+/* МЕЛКИЕ ДЕТАЛИ */
+.legend-item { display: flex; align-items: center; margin-bottom: 6px; font-size: 13px; }
+.legend-item:hover { background: rgba(0, 0, 0, 0.05); border-radius: 4px; }
 
-
-.legend-item { display: flex; align-items: center; margin-bottom: 5px; font-size: 13px; }
-
+/* АДАПТИВНОСТЬ */
 @media (max-width: 600px) {
-    .legend {
+    .side-controls {
+        width: 200px; /* Сужаем на мобилках */
+        right: 8px;
         top: 10px;
-        right: 10px;
-        /* Используем vh для ширины, но добавляем min-width, 
-           чтобы на узких экранах текст не превращался в кашу */
-        min-width: 160px; 
-        max-width: 280px;
-        
-        /* Ограничиваем высоту, чтобы не перекрывать пол-экрана */
-        max-height: 45vh; 
-        
-        transform: none;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden; /* Чтобы скругленные углы не резались контентом */
-    }
-
-    .legend.collapsed {
-        transform: none;
-        max-height: auto; /* Высота только хедера в свернутом виде */
-        width: auto; /* Можно даже сузить ее, когда она закрыта */
-    }
-
-    /* Обязательно добавь это, чтобы внутри работал скролл */
-    .legend-body {
-        overflow-y: auto; 
-        flex: 1; /* Занимает всё оставшееся место в пределах max-height */
-    }
-}
-
-@media (max-width: 850px) {
-    .panel { 
-        right: 10px; 
-        width: auto; 
-        bottom: 90px; /* Поднимаем чуть выше футера */
-        max-height: 25vh; /* Максимум 25% высоты экрана */
-    }
-
-    .panel-body {
-        max-height: 20vh; /* Ограничиваем высоту логов внутри */
     }
 }

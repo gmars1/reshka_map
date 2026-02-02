@@ -67,11 +67,17 @@ export class UIManager {
 
     #initToggle() {
         const header = document.getElementById('panelHeader');
-        if (header) {
+        const panelEl = document.getElementById('mainPanel');
+
+        if (header && panelEl) {
             header.addEventListener('click', () => {
-                const isHidden = this.#panelBody.style.display === 'none';
-                this.#panelBody.style.display = isHidden ? 'block' : 'none';
-                this.#toggleBtn.innerText = isHidden ? '−' : '+';
+                // Только переключаем класс, высоту считает CSS
+                panelEl.classList.toggle('collapsed');
+                
+                if (this.#toggleBtn) {
+                    const isCollapsed = panelEl.classList.contains('collapsed');
+                    this.#toggleBtn.innerText = isCollapsed ? '+' : '−';
+                }
             });
         }
     }
