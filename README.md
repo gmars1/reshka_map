@@ -5,12 +5,17 @@
 
 ## Источники данных
 
-Данные получены через MediaWiki API со страницы Cyclowiki:  
-https://cyclowiki.org/wiki/Выпуски_телепередачи_«Орёл_и_решка»
+Данные получены через MediaWiki API со страницы Wikipedia:  
+https://ru.wikipedia.org/wiki/Орёл_и_решка_(телепередача)
+
+Использованы данные <a href="https://ru.wikipedia.org/wiki/Орёл_и_решка_(телепередача)"> авторов Википедии
+Лицензия: 
+<a href="https://creativecommons.org/licenses/by-sa/4.0/deed.ru">
+    CC BY-SA 4.0
+</a>
 
 Текст страницы доступен по лицензиям:
-- GNU Free Documentation License (GFDL)
-- Creative Commons Attribution-ShareAlike (CC BY-SA 3.0 / 4.0)
+- Creative Commons Attribution-ShareAlike (CC BY-SA 4.0)
 
 ## Используемые технологии
 
@@ -31,11 +36,6 @@ https://cyclowiki.org/wiki/Выпуски_телепередачи_«Орёл_и
 «Орёл и Решка».
 
 
-https://ru.wikipedia.org/w/index.php?title=Орёл_и_решка_(телепередача)&action=edit&section=2
-
-3
-
-4
 
 
 
