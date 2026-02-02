@@ -18,13 +18,20 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
 
 /* ЛЕГЕНДА СЛЕВА ПО ЦЕНТРУ */
 .legend {
-    left: 12px; top: 90%;
+    right: 12px; 
+    top: 35%; /* Возвращаем центр */
     transform: translateY(-50%);
-    width: 220px; max-height: 50vh;
-    display: flex; flex-direction: column;
+    width: 220px; 
+    max-height: 70vh; /* Увеличил, чтобы больше сезонов влезало */
+    display: flex; 
+    flex-direction: column;
 }
 
-.legend.collapsed { transform: translateY(-50%); max-height: 44px; }
+/* Обязательно добавляем это, чтобы свернутая легенда не прыгала */
+.legend.collapsed { 
+    max-height: 44px; 
+    transform: translateY(-50%); 
+}
 
 .legend-header, .panel-header {
     padding: 12px; cursor: pointer; display: flex; 
@@ -44,7 +51,7 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
 .legend-item { display: flex; align-items: center; margin-bottom: 5px; font-size: 13px; }
 
 @media (max-width: 600px) {
-    .legend { top: 10px; left: 10px; right: 10px; width: auto; transform: none; }
+    .legend { top: 10px; left: 50px; right: 10px; width: auto; transform: none; }
     .legend.collapsed { transform: none; }
-    .panel { right: 10px; left: 10px; width: auto; bottom: 30px; }
+    .panel { right: 10px; left: 10px; width: auto; bottom: 90px; }
 }
