@@ -2,82 +2,67 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    
     <title>Орёл и Решка — Интерактивная карта выпусков</title>
-    <meta name="description" content="Интерактивная карта всех сезонов шоу Орёл и Решка с геолокацией выпусков.">
-
-    <link rel="preconnect" href="https://unpkg.com">
-    
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
-          crossorigin=""/>
-    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
-    <main id="map" role="application" aria-label="Интерактивная карта путешествий"></main>
+    <main id="map" class="map-container"></main>
 
-    <section id="legend" class="legend collapsed" aria-labelledby="legendTitle">
-        <div class="legend-header">
+    <section id="legend" class="legend collapsed">
+        <div id="legendHeader" class="legend-header">
             <span id="legendTitle">Сезоны</span>
-            <button id="legendArrow" aria-expanded="false" aria-controls="legendBody" aria-label="Переключить видимость легенды">▾</button>
+            <button id="legendArrow" class="legend-arrow">
+                <span class="arrow-icon">▾</span>
+            </button>
         </div>
-        <div class="legend-body" id="legendBody" hidden></div>
+        <div id="legendBody" class="legend-body" hidden></div>
     </section>
 
-    <aside class="panel" id="mainPanel" aria-labelledby="panelHeading">
-        <header class="panel-header" id="panelHeader">
+    <aside id="mainPanel" class="panel">
+        <header id="panelHeader" class="panel-header">
             <h2 id="panelHeading">Орёл и Решка</h2>
-            <button id="toggleBtn" aria-label="Свернуть панель">−</button>
+            <button id="toggleBtn" class="panel-toggle">−</button>
         </header>
-
-        <div id="panelBody">
-            <div id="status" role="status">⏳ Загрузка данных…</div>
-            <div id="log" class="log" aria-live="polite"></div>
+        <div id="panelBody" class="panel-body">
+            <div id="status" class="status-indicator">⏳ Загрузка данных…</div>
+            <div id="log" class="log-container"></div>
         </div>
     </aside>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
-            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
-            crossorigin=""></script>
-    <script src="script.js" type="module"></script>
-
-    
-    <footer class="license">
-        <div>
+    <footer id="mainFooter" class="license" role="contentinfo">
+        <div class="footer-section">
             Данные выпусков получены через MediaWiki API<br>
             Источник: 
             <a href="https://cyclowiki.org/wiki/Выпуски_телепередачи_«Орёл_и_решка»"
-               target="_blank" rel="noopener">
+               target="_blank" rel="noopener noreferrer">
                 Cyclowiki
             </a><br>
             Лицензии контента: GFDL, 
-            <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank">
+            <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">
                 CC BY-SA 4.0
             </a>
         </div>
 
-        <div style="margin-top:6px">
+        <div class="footer-section" style="margin-top:6px">
             Карта: © 
-            <a href="https://www.openstreetmap.org/copyright" target="_blank">
+            <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">
                 OpenStreetMap
             </a> contributors<br>
             Геокодирование: 
-            <a href="https://nominatim.openstreetmap.org/" target="_blank">
+            <a href="https://nominatim.openstreetmap.org/" target="_blank" rel="noopener noreferrer">
                 Nominatim
             </a>
         </div>
 
-        <div style="margin-top:6px; font-size:10px; opacity:.7">
+        <div class="footer-disclaimer" style="margin-top:6px; font-size:10px; opacity:.7">
             Проект не является официальным сайтом телепередачи
         </div>
     </footer>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script src="script.js" type="module"></script>
 </body>
 </html>
-
-
