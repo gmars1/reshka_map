@@ -6,6 +6,9 @@ export class UIManager {
     #toggleBtn = document.getElementById("toggleBtn");
     #legendEl = document.getElementById("legend");
 
+    #arrow = document.getElementById('legendArrow');
+
+
     // =================== Карта и маркеры ===================
     #map;
     #markers;
@@ -18,7 +21,7 @@ export class UIManager {
     #colors = [];
 
     constructor() {
-        this.#generateGradient();
+        this.#generateSeasonColors();
 
         // Инициализация карты
         this.#map = L.map("map").setView([20, 0], 2);
@@ -32,33 +35,42 @@ export class UIManager {
     }
 
     // =================== Градиент ===================
-    #generateGradient(seasonsCount = 10) {
-        const colorsPerSeason = 30;
-        const seasonStep = Math.floor(colorsPerSeason / seasonsCount);
+    #seasonColors = new Map(); // цвета по сезонам
 
-        const startColor = { r: 255, g: 200, b: 200 };
-        const endColor = { r: 128, g: 0, b: 128 };
+    #generateSeasonColors(totalSeasons = 28, maxShades = 20) {
+        // totalSeasons = 28, maxShades = максимально оттенков в сезоне
+        this.#seasonColors = []; // массив сезонов, внутри – массив оттенков
 
-        this.#colors = [];
+        const start = { r: 148, g: 0, b: 211 }; // фиолет
+        const end   = { r: 0, g: 128, b: 0 };   // зелёный
 
-        for (let season = 0; season < seasonsCount; season++) {
-            for (let i = 0; i < seasonStep; i++) {
-                const t = i / (seasonStep - 1);
-                const r = Math.round(startColor.r + t * (endColor.r - startColor.r));
-                const g = Math.round(startColor.g + t * (endColor.g - startColor.g));
-                const b = Math.round(startColor.b + t * (endColor.b - startColor.b));
+        for (let s = 0; s < totalSeasons; s++) {
+            const t = s / (totalSeasons - 1);
+            // базовый цвет сезона
+            const baseR = Math.round(start.r + t*(end.r - start.r));
+            const baseG = Math.round(start.g + t*(end.g - start.g));
+            const baseB = Math.round(start.b + t*(end.b - start.b));
 
-                this.#colors.push(`#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`);
+            // создаём градации для серий сезона
+            const shades = [];
+            for (let i = 0; i < maxShades; i++) {
+                const f = i / (maxShades - 1);
+                // интерполяция к белому для светлых оттенков
+                const r = Math.round(baseR + f*(255 - baseR));
+                const g = Math.round(baseG + f*(255 - baseG));
+                const b = Math.round(baseB + f*(255 - baseB));
+                shades.push(`#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`);
             }
-        }
-
-        while(this.#colors.length < colorsPerSeason) {
-            this.#colors.push(this.#colors[this.#colors.length - 1]);
+            this.#seasonColors.push(shades);
         }
     }
 
-    #getColorByIndex(index) {
-        return this.#colors[index % this.#colors.length];
+    // Получение цвета: указываем сезон и индекс выпуска внутри сезона
+    #getColorByIndex(seasonIndex, seriesIndex = 0) {
+        const shades = this.#seasonColors[seasonIndex-1];
+        if (!shades) return "#000000"; // fallback
+        const idx = Math.min(seriesIndex-1, shades.length - 1);
+        return shades[idx];
     }
 
     // =================== Панель ===================
@@ -75,6 +87,14 @@ export class UIManager {
         this.#toggleBtn.innerText = isHidden ? '−' : '+';
     }
 
+    collapseLegend() {
+        this.#legendEl.querySelector('.legend-header').addEventListener('click', () => {
+            this.#legendEl.classList.toggle('collapsed');
+            this.#arrow.textContent =
+                this.#legendEl.classList.contains('collapsed') ? '▸' : '▾';
+        });
+    }
+
     // =================== Статус и логи ===================
     updateStatus(text) {
         this.#statusEl.textContent = text;
@@ -88,8 +108,8 @@ export class UIManager {
     }
 
     // =================== Маркеры ===================
-    addMarker(coords, popupContent, colorIndex, seasonName) {
-        const color = this.#getColorByIndex(colorIndex);
+    addMarker(coords, popupContent, seasonIndex, seasonName, videoIndex) {
+        const color = this.#getColorByIndex(seasonIndex, videoIndex);
 
         const icon = L.divIcon({
             className: "custom-marker",
@@ -185,8 +205,9 @@ export class UIManager {
         controlsDiv.appendChild(btnShowAll);
         controlsDiv.appendChild(btnHideAll);
         this.#legendEl.appendChild(controlsDiv);
-
+        
         // ================== Сезоны ==================
+        let idx = 1;
         seasons.forEach(season => {
             const div = document.createElement('div');
             div.className = 'legend-item';
@@ -198,12 +219,13 @@ export class UIManager {
             colorBox.style.display = 'inline-block';
             colorBox.style.width = '16px';
             colorBox.style.height = '16px';
-            colorBox.style.background = this.#getColorByIndex(season);
+            colorBox.style.background = this.#getColorByIndex(idx, 1);
+            idx+=1;
             colorBox.style.border = '1px solid #000';
             colorBox.style.marginRight = '6px';
 
             div.appendChild(colorBox);
-            div.appendChild(document.createTextNode(`Сезон ${season + 1}`));
+            div.appendChild(document.createTextNode(`${season}`));
 
             // Изначально все сезоны видимы
             this.#seasonVisibility.set(season, true);

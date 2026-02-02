@@ -5,13 +5,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="b012a411-dff2-42f2-8835-9ed69ca1bfbf" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/js/cache.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/js/data.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/js/externalApi.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/js/funcs.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/js/ui.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/js/ui/ui.js" beforeDir="false" afterPath="$PROJECT_DIR$/js/ui/ui.js" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/script.js" beforeDir="false" afterPath="$PROJECT_DIR$/script.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/style.css" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

@@ -17,8 +17,9 @@ async function init() {
         uiManager.fitMap();
 
         // создаём легенду
-        const uniqueSeasons = [...new Set(episodes.map(ep => ep.season))].sort((a,b)=>a-b);
+        const uniqueSeasons = [...new Set(episodes.map(ep => ep.season))];
         uiManager.createLegend(uniqueSeasons);
+        uiManager.collapseLegend();
 
     } catch (e) {
         uiManager.updateStatus("❌ " + e.message);
@@ -62,7 +63,7 @@ async function plotEpisodes(episodes) {
             `;
 
             const season = parseSeason(ep.season);
-            uiManager.addMarker(coords, content, season, escapeHtml(ep.season));
+            uiManager.addMarker(coords, content, season, escapeHtml(ep.season), escapeHtml(idx.inSeason));
 
         } catch (e) {
             console.error("Episode failed:", ep.location, e);
