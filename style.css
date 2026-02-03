@@ -12,7 +12,7 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
     position: fixed;
     right: 12px;
     top: 20px;
-    bottom: 110px; /* Барьер для футера */
+    bottom: 120px; /* Барьер для футера */
     width: 280px;
     display: flex;
     flex-direction: column;
@@ -89,7 +89,7 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
 /* ЛИЦЕНЗИЯ (ФУТЕР) */
 .license {
     position: fixed;
-    bottom: 0;
+    bottom: 13px;
     left: 0;
     width: 100%;
     text-align: center;
@@ -97,7 +97,7 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
     padding: 8px 0;
     z-index: 500;
     background: rgba(255,255,255,0.7);
-    backdrop-filter: blur(5px);
+    backdrop-filter: blur(3px);
 }
 
 /* МЕЛКИЕ ДЕТАЛИ */
