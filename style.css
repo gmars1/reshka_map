@@ -12,7 +12,7 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
     position: fixed;
     right: 12px;
     top: 20px;
-    bottom: 135px; /* Барьер для футера */
+    bottom: 150px; /* Барьер для футера */
     width: 280px;
     display: flex;
     flex-direction: column;
