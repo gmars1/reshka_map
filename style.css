@@ -12,7 +12,7 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
     position: fixed;
     right: 12px;
     top: 20px;
-    bottom: 150px; /* Барьер для футера */
+    bottom: 140px; /* Барьер для футера */
     width: 280px;
     display: flex;
     flex-direction: column;
@@ -51,7 +51,7 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Более плавная анимация */
 }
 
 
@@ -67,17 +67,29 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
 }
 
 /* Состояния свернутости */
-.legend.collapsed { max-height: 48px; flex: 0 0 48px; }
-.panel.collapsed { max-height: 48px; flex: 0 0 48px; }
+.legend.collapsed, .panel.collapsed { 
+    height: 48px; 
+    min-height: 48px; 
+    max-height: 48px; 
+    flex: 0 0 48px; 
+}
 
 /* ВНУТРЕННОСТИ */
 .legend-header, .panel-header {
-    padding: 12px;
-    cursor: pointer;
+    height: 48px;
+    min-height: 48px;
+    padding: 0 16px; /* Чуть больше воздуха по бокам */
     display: flex;
     justify-content: space-between;
     align-items: center;
-    font-weight: bold;
+    cursor: pointer;
+    user-select: none; /* Чтобы текст не выделялся при кликах */
+}
+
+.collapsed {
+    height: 48px !important;
+    min-height: 48px !important;
+    flex: 0 0 48px !important;
 }
 
 .legend-body, .panel-body {
