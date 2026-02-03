@@ -5,6 +5,7 @@ export class UIManager {
     #seasonColors = [];
     #seasonColorMap = new Map(); // { "Сезон 1": 1, "Сезон 5": 2 }
     #nextColorIndex = 1;
+    #coordsRegistry = new Map();
 
     constructor() {
         this.#statusEl = document.getElementById("status");
@@ -115,21 +116,56 @@ export class UIManager {
     }
 
     addMarker(coords, content, seasonName, eIdx) {
-        // Если этот сезон видим впервые, назначаем ему следующий свободный индекс цвета
         if (!this.#seasonColorMap.has(seasonName)) {
             this.#seasonColorMap.set(seasonName, this.#nextColorIndex++);
         }
-        
+
+        const key = coords.join(',');
+        let finalCoords = [...coords];
+
+        if (!this.#coordsRegistry.has(key)) {
+            this.#coordsRegistry.set(key, []);
+        }
+        const previousMarkers = this.#coordsRegistry.get(key);
+        const count = previousMarkers.length;
+
+        // ЛОГИКА СМЕЩЕНИЯ
+        if (count > 0) {
+            // Смещаем только ПОСЛЕДУЮЩИЕ маркеры
+            const radius = 0.007; 
+            const angle = (count - 1) * 137.5 * (Math.PI / 180); // count-1 чтобы первый лепесток шел под своим углом
+            
+            finalCoords[0] += radius * Math.sqrt(count) * Math.cos(angle);
+            finalCoords[1] += radius * Math.sqrt(count) * Math.sin(angle);
+        }
+
+        let c = '#1a350c';
+        // Определяем цвет обводки
+        const isDuplicate = count > 0;
+        const strokeColor = isDuplicate ? c : '#f0eac0';
+
         const sIdx = this.#seasonColorMap.get(seasonName);
         const color = this.#getColorByIndex(sIdx, eIdx);
 
-        const marker = L.circleMarker(coords, {
-            radius: 7, fillColor: color, color: '#fff', weight: 2, fillOpacity: 1
+        const marker = L.circleMarker(finalCoords, {
+            radius: 7, 
+            fillColor: color, 
+            color: strokeColor, 
+            weight: 2, 
+            fillOpacity: 1
         }).bindPopup(content);
         
+        // Если это ВТОРОЙ маркер в этой точке, красим ПЕРВЫЙ маркер 
+        if (count === 1) {
+            previousMarkers[0].setStyle({ color: c });
+        }
+
+        previousMarkers.push(marker);
+
         marker.addTo(this.#markers);
         if (!this.#seasonMarkers.has(seasonName)) this.#seasonMarkers.set(seasonName, []);
         this.#seasonMarkers.get(seasonName).push(marker);
+
         return marker;
     }
 
