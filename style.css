@@ -17,7 +17,7 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
     display: flex;
     flex-direction: column;
     /* Убираем justify-content: flex-end, возвращаем стандарт */
-    justify-content: flex-start; 
+    justify-content: space-between; 
     gap: 12px;
     z-index: 1000;
     pointer-events: none;
@@ -30,7 +30,7 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overf
     
     /* МАГИЯ ЗДЕСЬ: */
     /* Этот маржин заберет всё пустое место между легендой и панелью */
-    margin-bottom: auto; 
+    margin-bottom: 0; 
 }
 
 .panel {
