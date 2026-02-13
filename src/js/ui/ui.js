@@ -212,46 +212,54 @@ export class UIManager {
         const q = query.toLowerCase();
         const results = [];
 
-        for (const marker of this.#allMarkers) {
-            const data = this.#markerData.get(marker);
-            if (!data) continue;
-            
-            if (data.location.toLowerCase().includes(q)) {
-                results.push({ marker, data });
+        if(q.length > 1){
+            for (const marker of this.#allMarkers) {
+                const data = this.#markerData.get(marker);
+                if (!data) continue;
+                
+                if (data.location.toLowerCase().includes(q)) {
+                    results.push({ marker, data });
+                }
             }
-        }
 
-        if (results.length === 0) {
-            container.innerHTML = '<div class="search-no-results">Ничего не найдено</div>';
-            return;
-        }
+            if (results.length === 0) {
+                container.innerHTML = '<div class="search-no-results">Ничего не найдено</div>';
+                return;
+            }
 
-        const maxResults = 15;
-        results.forEach(({ marker, data }) => {
-            this.#highlightMarker(marker);
-            
-            const item = document.createElement('div');
-            item.className = 'search-result-item';
-            item.innerHTML = `
-                <span class="search-result-color" style="background: ${this.#getMarkerColor(data.season)}"></span>
-                <span class="search-result-text">${this.#highlightText(data.location, q)}</span>
-                <span class="search-result-season">${data.season}</span>
-            `;
-            
-            item.addEventListener('click', () => {
-                this.#flyToMarker(marker);
-                marker.openPopup();
+            const maxResults = 15;
+            results.forEach(({ marker, data }) => {
+                this.#highlightMarker(marker);
+                
+                const item = document.createElement('div');
+                item.className = 'search-result-item';
+                item.innerHTML = `
+                    <span class="search-result-color" style="background: ${this.#getMarkerColor(data.season)}"></span>
+                    <span class="search-result-text">${this.#highlightText(data.location, q)}</span>
+                    <span class="search-result-season">${data.season}</span>
+                `;
+                
+                item.addEventListener('click', () => {
+                    this.#flyToMarker(marker);
+                    marker.openPopup();
+                });
+                
+                container.appendChild(item);
             });
-            
-            container.appendChild(item);
-        });
 
-        // if (results.length > maxResults) {
-        //     const more = document.createElement('div');
-        //     more.className = 'search-no-results';
-        //     more.textContent = `и ещё ${results.length - maxResults} результатов`;
-        //     container.appendChild(more);
-        // }
+            // if (results.length > maxResults) {
+            //     const more = document.createElement('div');
+            //     more.className = 'search-no-results';
+            //     more.textContent = `и ещё ${results.length - maxResults} результатов`;
+            //     container.appendChild(more);
+            // }
+        }
+        if(q.length == 1){
+            const more = document.createElement('div');
+            more.className = 'search-no-results';
+            more.textContent = `введите более 1-го символа`;
+            container.appendChild(more);
+        }
     }
 
     #highlightMarker(marker) {
