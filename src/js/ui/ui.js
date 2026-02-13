@@ -1,50 +1,314 @@
 export class UIManager {
-    #statusEl; #logEl; #panelBody; #toggleBtn; #legendEl; #arrow; #legendBody;
-    #map; #markers; #seasonMarkers = new Map();
+    #map;
+    #markers;
+    #seasonMarkers = new Map();
     #seasonVisibility = new Map();
     #seasonColors = [];
-    #seasonColorMap = new Map(); // { "Сезон 1": 1, "Сезон 5": 2 }
+    #seasonColorMap = new Map();
     #nextColorIndex = 1;
     #coordsRegistry = new Map();
+    #isMobile;
+    #markerData = new Map();
+    #allMarkers = [];
+    #highlightedMarkers = new Set();
 
     constructor() {
-        this.#statusEl = document.getElementById("status");
-        this.#logEl = document.getElementById("log");
-        this.#panelBody = document.getElementById("panelBody");
-        this.#toggleBtn = document.getElementById("toggleBtn");
-        this.#legendEl = document.getElementById("legend");
-        this.#legendBody = document.getElementById("legendBody");
-        this.#arrow = document.querySelector('.arrow-icon');
-
+        this.#isMobile = window.innerWidth <= 768 || window.innerHeight <= 500;
         this.#generateSeasonColors(36, 50);
 
-        this.#map = L.map("map").setView([20, 0], 2);
+        this.#map = L.map("map", {
+            zoomControl: false
+        }).setView([20, 0], 2);
+
         L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            attribution: '© OpenStreetMap'
+            attribution: '© OpenStreetMap',
+            maxZoom: 18
         }).addTo(this.#map);
-        
+
         this.#markers = L.featureGroup().addTo(this.#map);
 
-        this.#initToggle();
+        L.control.zoom({
+            position: 'bottomright'
+        }).addTo(this.#map);
+
+        this.#map.attributionControl.addAttribution('Данные: Википедия | CC BY-SA 4.0');
+
+        this.#initializeElements();
+        this.#initializeEventListeners();
+        this.#initializeBottomSheet();
+        this.#initializeResponsiveHandlers();
     }
 
-    // Метод фильтрации, который отсутствовал!
-    filterSeason(seasonName, show = true) {
-        const markers = this.#seasonMarkers.get(seasonName);
-        if (!markers) return;
+    #initializeElements() {
+    }
 
-        markers.forEach(marker => {
-            if (show) {
-                if (!this.#map.hasLayer(marker)) marker.addTo(this.#map);
-            } else {
-                if (this.#map.hasLayer(marker)) marker.remove();
-            }
+    #initializeEventListeners() {
+        // Desktop: Season panel toggle
+        const seasonsHeader = document.getElementById('seasonsHeader');
+        if (seasonsHeader) {
+            seasonsHeader.addEventListener('click', () => {
+                const panel = document.getElementById('seasonsPanel');
+                panel?.classList.toggle('expanded');
+            });
+        }
+
+        // Desktop: Search input
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => this.#handleSearch(e.target.value, 'searchResults'));
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    searchInput.value = '';
+                    this.#handleSearch('', 'searchResults');
+                    searchInput.blur();
+                }
+            });
+        }
+
+        // Mobile: Search input
+        const sheetSearchInput = document.getElementById('sheetSearchInput');
+        if (sheetSearchInput) {
+            sheetSearchInput.addEventListener('input', (e) => this.#handleSearch(e.target.value, 'sheetSearchResults'));
+            sheetSearchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    sheetSearchInput.value = '';
+                    this.#handleSearch('', 'sheetSearchResults');
+                    sheetSearchInput.blur();
+                }
+            });
+        }
+
+        // Season controls (both desktop and mobile)
+        document.querySelectorAll('.seasons-controls').forEach(container => {
+            container.addEventListener('click', (e) => {
+                const btn = e.target.closest('.seasons-btn');
+                if (!btn) return;
+                
+                const action = btn.dataset.action;
+                const seasons = Array.from(this.#seasonVisibility.keys());
+                
+                if (action === 'showAll') {
+                    seasons.forEach(s => this.#setSeasonVisibility(s, true));
+                } else if (action === 'hideAll') {
+                    seasons.forEach(s => this.#setSeasonVisibility(s, false));
+                }
+            });
         });
+
+        // License toggle
+        const licenseToggle = document.getElementById('licenseToggle');
+        const licenseExpanded = document.getElementById('licenseExpanded');
+        if (licenseToggle && licenseExpanded) {
+            licenseToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                licenseExpanded.classList.toggle('visible');
+            });
+            
+            document.addEventListener('click', (e) => {
+                if (!licenseExpanded.contains(e.target) && e.target !== licenseToggle) {
+                    licenseExpanded.classList.remove('visible');
+                }
+            });
+        }
+    }
+
+    #initializeBottomSheet() {
+        const sheet = document.getElementById('bottomSheet');
+        const handle = document.getElementById('bottomSheetHandle');
+        const tabs = document.getElementById('bottomSheetTabs');
+        
+        if (!sheet || !handle || !tabs) return;
+
+        // Tab switching
+        tabs.addEventListener('click', (e) => {
+            const tab = e.target.closest('.sheet-tab');
+            if (!tab) return;
+            
+            // Expand sheet when tab clicked
+            if (!sheet.classList.contains('expanded')) {
+                sheet.classList.add('expanded');
+            }
+            
+            tabs.querySelectorAll('.sheet-tab').forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            const tabName = tab.dataset.tab;
+            document.querySelectorAll('.sheet-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(`sheet${tabName.charAt(0).toUpperCase() + tabName.slice(1)}`)?.classList.add('active');
+        });
+
+        // Handle tap to toggle
+        handle.addEventListener('click', () => {
+            sheet.classList.toggle('expanded');
+            this.#updateLicensePosition();
+        });
+
+        // Drag to expand/collapse
+        let startY = 0;
+        let startExpanded = false;
+
+        handle.addEventListener('touchstart', (e) => {
+            startY = e.touches[0].clientY;
+            startExpanded = sheet.classList.contains('expanded');
+            sheet.style.transition = 'none';
+        }, { passive: true });
+
+        handle.addEventListener('touchmove', (e) => {
+            const currentY = e.touches[0].clientY;
+            const diff = startY - currentY;
+            
+            if (diff > 30 && !startExpanded) {
+                sheet.classList.add('expanded');
+                this.#updateLicensePosition();
+            } else if (diff < -30 && startExpanded) {
+                sheet.classList.remove('expanded');
+                this.#updateLicensePosition();
+            }
+        }, { passive: true });
+
+        handle.addEventListener('touchend', () => {
+            sheet.style.transition = '';
+        });
+    }
+
+    #updateLicensePosition() {
+        const sheet = document.getElementById('bottomSheet');
+        const license = document.querySelector('.license-container');
+        if (!sheet || !license) return;
+        
+        if (sheet.classList.contains('expanded') && window.innerWidth <= 768) {
+            license.style.bottom = 'calc(60vh + 12px)';
+        } else {
+            license.style.bottom = '';
+        }
+    }
+
+    #initializeResponsiveHandlers() {
+        const handleResize = () => {
+            const wasMobile = this.#isMobile;
+            this.#isMobile = window.innerWidth <= 768 || window.innerHeight <= 500;
+            
+            if (wasMobile !== this.#isMobile) {
+                this.#map.invalidateSize();
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('orientationchange', () => setTimeout(handleResize, 100));
+    }
+
+    #handleSearch(query, resultsContainerId) {
+        const container = document.getElementById(resultsContainerId);
+        if (!container) return;
+
+        this.#clearHighlights();
+        container.innerHTML = '';
+
+        if (!query.trim()) {
+            container.innerHTML = '<div class="search-no-results">Введите название города или страны</div>';
+            return;
+        }
+
+        const q = query.toLowerCase();
+        const results = [];
+
+        for (const marker of this.#allMarkers) {
+            const data = this.#markerData.get(marker);
+            if (!data) continue;
+            
+            if (data.location.toLowerCase().includes(q)) {
+                results.push({ marker, data });
+            }
+        }
+
+        if (results.length === 0) {
+            container.innerHTML = '<div class="search-no-results">Ничего не найдено</div>';
+            return;
+        }
+
+        const maxResults = 15;
+        results.slice(0, maxResults).forEach(({ marker, data }) => {
+            this.#highlightMarker(marker);
+            
+            const item = document.createElement('div');
+            item.className = 'search-result-item';
+            item.innerHTML = `
+                <span class="search-result-color" style="background: ${this.#getMarkerColor(data.season)}"></span>
+                <span class="search-result-text">${this.#highlightText(data.location, q)}</span>
+                <span class="search-result-season">${data.season}</span>
+            `;
+            
+            item.addEventListener('click', () => {
+                this.#flyToMarker(marker);
+                marker.openPopup();
+            });
+            
+            container.appendChild(item);
+        });
+
+        if (results.length > maxResults) {
+            const more = document.createElement('div');
+            more.className = 'search-no-results';
+            more.textContent = `и ещё ${results.length - maxResults} результатов`;
+            container.appendChild(more);
+        }
+    }
+
+    #highlightMarker(marker) {
+        marker._originalStyle = {
+            color: marker.options.color,
+            weight: marker.options.weight
+        };
+        marker.setStyle({ color: '#ff6600', weight: 3 });
+        this.#highlightedMarkers.add(marker);
+    }
+
+    #clearHighlights() {
+        for (const marker of this.#highlightedMarkers) {
+            if (marker._originalStyle) {
+                marker.setStyle(marker._originalStyle);
+            }
+        }
+        this.#highlightedMarkers.clear();
+    }
+
+    #highlightText(text, query) {
+        const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+        return text.replace(regex, '<span class="search-highlight">$1</span>');
+    }
+
+    #getMarkerColor(season) {
+        const sIdx = this.#seasonColorMap.get(season) || 1;
+        return this.#getColorByIndex(sIdx, 0);
+    }
+
+    #flyToMarker(marker) {
+        this.#map.flyTo(marker.getLatLng(), 10, { duration: 0.6 });
+    }
+
+    #setSeasonVisibility(seasonName, visible) {
+        this.#seasonVisibility.set(seasonName, visible);
+        
+        document.querySelectorAll(`[data-season="${seasonName}"]`).forEach(item => {
+            item.classList.toggle('disabled', !visible);
+        });
+
+        const markers = this.#seasonMarkers.get(seasonName);
+        if (markers) {
+            markers.forEach(marker => {
+                if (visible) {
+                    if (!this.#map.hasLayer(marker)) marker.addTo(this.#map);
+                } else {
+                    if (this.#map.hasLayer(marker)) marker.remove();
+                }
+            });
+        }
     }
 
     #generateSeasonColors(totalSeasons, maxShades) {
         const start = { r: 148, g: 0, b: 211 };
         const end = { r: 0, g: 128, b: 0 };
+        
         for (let s = 0; s < totalSeasons; s++) {
             const t = s / (totalSeasons - 1);
             const base = {
@@ -52,6 +316,7 @@ export class UIManager {
                 g: Math.round(start.g + t * (end.g - start.g)),
                 b: Math.round(start.b + t * (end.b - start.b))
             };
+            
             const shades = [];
             for (let i = 0; i < maxShades; i++) {
                 const f = i / (maxShades - 1);
@@ -66,56 +331,26 @@ export class UIManager {
         return season[Math.min(eIdx || 0, season.length - 1)];
     }
 
-    #initToggle() {
-        const header = document.getElementById('panelHeader');
-        const panelEl = document.getElementById('mainPanel');
-
-        if (header && panelEl) {
-            header.addEventListener('click', () => {
-                // Только переключаем класс, высоту считает CSS
-                panelEl.classList.toggle('collapsed');
-                
-                if (this.#toggleBtn) {
-                    const isCollapsed = panelEl.classList.contains('collapsed');
-                    this.#toggleBtn.innerText = isCollapsed ? '+' : '−';
-                }
-            });
-        }
+    updateStatus(text) {
+        ['status', 'sheetStatusIndicator'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = text;
+        });
     }
 
-    collapseLegend() {
-        const header = document.getElementById('legendHeader');
-        if (header) {
-            header.addEventListener('click', () => {
-                const isCollapsed = this.#legendEl.classList.toggle('collapsed');
-                this.#legendBody.hidden = isCollapsed;
-                if (this.#arrow) {
-                    this.#arrow.textContent = isCollapsed ? '▸' : '▾';
-                }
-            });
-        }
-    }
-
-    setLegendState(open = true) {
-        const isCollapsed = !open;
-        this.#legendEl.classList.toggle('collapsed', isCollapsed);
-        this.#legendBody.hidden = isCollapsed;
-        if (this.#arrow) {
-            this.#arrow.textContent = isCollapsed ? '▸' : '▾';
-        }
-    }
-
-    updateStatus(text) { if (this.#statusEl) this.#statusEl.textContent = text; }
-    
     addLog(msg, type) {
-        if (!this.#logEl) return;
-        const div = document.createElement('div');
-        div.style.color = type === 'err' ? 'red' : 'inherit';
-        div.textContent = msg;
-        this.#logEl.prepend(div);
+        ['log', 'sheetLog'].forEach(id => {
+            const container = document.getElementById(id);
+            if (!container) return;
+            
+            const div = document.createElement('div');
+            div.className = type === 'err' ? 'log-item error' : 'log-item';
+            div.textContent = msg;
+            container.prepend(div);
+        });
     }
 
-    addMarker(coords, content, seasonName, eIdx) {
+    addMarker(coords, content, seasonName, eIdx, locationData = null) {
         if (!this.#seasonColorMap.has(seasonName)) {
             this.#seasonColorMap.set(seasonName, this.#nextColorIndex++);
         }
@@ -126,103 +361,112 @@ export class UIManager {
         if (!this.#coordsRegistry.has(key)) {
             this.#coordsRegistry.set(key, []);
         }
+        
         const previousMarkers = this.#coordsRegistry.get(key);
         const count = previousMarkers.length;
 
-        // ЛОГИКА СМЕЩЕНИЯ
         if (count > 0) {
-            // Смещаем только ПОСЛЕДУЮЩИЕ маркеры
-            const radius = 0.007; 
-            const angle = (count - 1) * 137.5 * (Math.PI / 180); // count-1 чтобы первый лепесток шел под своим углом
-            
+            const radius = 0.007;
+            const angle = (count - 1) * 137.5 * (Math.PI / 180);
             finalCoords[0] += radius * Math.sqrt(count) * Math.cos(angle);
             finalCoords[1] += radius * Math.sqrt(count) * Math.sin(angle);
         }
 
-        let c = '#1a350c';
-        // Определяем цвет обводки
-        const isDuplicate = count > 0;
-        const strokeColor = isDuplicate ? c : '#f0eac0';
-
+        const strokeColor = count > 0 ? '#1a350c' : '#f0eac0';
         const sIdx = this.#seasonColorMap.get(seasonName);
         const color = this.#getColorByIndex(sIdx, eIdx);
+        const radius = this.#isMobile ? 8 : 7;
 
         const marker = L.circleMarker(finalCoords, {
-            radius: 7, 
-            fillColor: color, 
-            color: strokeColor, 
-            weight: 2, 
+            radius,
+            fillColor: color,
+            color: strokeColor,
+            weight: 2,
             fillOpacity: 1
-        }).bindPopup(content);
-        
-        // Если это ВТОРОЙ маркер в этой точке, красим ПЕРВЫЙ маркер 
+        }).bindPopup(content, {
+            maxWidth: this.#isMobile ? 280 : 320,
+            closeButton: this.#isMobile
+        });
+
         if (count === 1) {
-            previousMarkers[0].setStyle({ color: c });
+            previousMarkers[0].setStyle({ color: '#1a350c' });
         }
 
         previousMarkers.push(marker);
-
         marker.addTo(this.#markers);
-        if (!this.#seasonMarkers.has(seasonName)) this.#seasonMarkers.set(seasonName, []);
+
+        if (!this.#seasonMarkers.has(seasonName)) {
+            this.#seasonMarkers.set(seasonName, []);
+        }
         this.#seasonMarkers.get(seasonName).push(marker);
+
+        this.#allMarkers.push(marker);
+        this.#markerData.set(marker, {
+            location: locationData || 'Unknown',
+            season: seasonName,
+            episode: eIdx
+        });
 
         return marker;
     }
 
-    fitMap() { if (this.#markers.getLayers().length) this.#map.fitBounds(this.#markers.getBounds().pad(0.1)); }
-    get markerCount() { return this.#markers.getLayers().length; }
+    fitMap() {
+        if (this.#markers.getLayers().length) {
+            this.#map.fitBounds(this.#markers.getBounds().pad(0.1));
+        }
+    }
+
+    get markerCount() {
+        return this.#markers.getLayers().length;
+    }
 
     createLegend(seasons) {
-        if (!this.#legendBody) return;
-        this.#legendBody.innerHTML = '';
+        const createItems = (containerId) => {
+            const container = document.getElementById(containerId);
+            if (!container) return;
 
-        // (Тут код кнопок управления остается прежним...)
-        const controlsDiv = document.createElement('div');
-        controlsDiv.style.cssText = 'display:flex; justify-content:space-between; margin-bottom:12px; gap:8px;';
-        const createControlBtn = (text, isShow) => {
-            const btn = document.createElement('button');
-            btn.textContent = text;
-            btn.style.cssText = 'flex:1; cursor:pointer; padding:4px; font-size:11px; border:1px solid #ccc; border-radius:4px; background:#f0f0f0;';
-            btn.onclick = (e) => {
-                e.stopPropagation();
-                seasons.forEach(s => {
-                    this.#seasonVisibility.set(s, isShow);
-                    this.filterSeason(s, isShow);
-                    const item = this.#legendBody.querySelector(`.legend-item[data-season="${s}"]`);
-                    if (item) item.style.opacity = isShow ? '1' : '0.3';
+            container.innerHTML = '';
+            
+            seasons.forEach((seasonName) => {
+                const item = document.createElement('div');
+                item.className = 'season-item';
+                item.setAttribute('data-season', seasonName);
+
+                const colorIndex = this.#seasonColorMap.get(seasonName) || 1;
+                const color = this.#getColorByIndex(colorIndex, 0);
+
+                item.innerHTML = `
+                    <span class="season-color" style="background: ${color}"></span>
+                    <span class="season-text">${seasonName}</span>
+                `;
+
+                this.#seasonVisibility.set(seasonName, true);
+
+                item.addEventListener('click', () => {
+                    const visible = !this.#seasonVisibility.get(seasonName);
+                    this.#setSeasonVisibility(seasonName, visible);
                 });
-            };
-            return btn;
+
+                container.appendChild(item);
+            });
         };
-        controlsDiv.appendChild(createControlBtn('Вкл все', true));
-        controlsDiv.appendChild(createControlBtn('Выкл все', false));
-        this.#legendBody.appendChild(controlsDiv);
 
-        // Список сезонов
-        seasons.forEach((seasonName) => {
-            const item = document.createElement('div');
-            item.className = 'legend-item';
-            item.setAttribute('data-season', seasonName);
-            item.style.cssText = 'display:flex; align-items:center; margin-bottom:6px; cursor:pointer; transition:opacity 0.2s;';
-            
-            // Получаем индекс цвета из той же карты, что использовали маркеры
-            const colorIndex = this.#seasonColorMap.get(seasonName) || 1;
-            const color = this.#getColorByIndex(colorIndex, 0);
-            
-            item.innerHTML = `
-                <span style="width:12px; height:12px; background:${color}; display:inline-block; margin-right:8px; border-radius:50%; border:1px solid rgba(0,0,0,0.2)"></span>
-                <span style="flex:1; font-size: 13px;">${seasonName}</span>
-            `;
+        createItems('seasonsItems');
+        createItems('sheetSeasonsItems');
 
-            this.#seasonVisibility.set(seasonName, true);
-            item.onclick = (e) => {
-                e.stopPropagation();
-                const visible = !this.#seasonVisibility.get(seasonName);
-                this.#seasonVisibility.set(seasonName, visible);
-                item.style.opacity = visible ? '1' : '0.3';
-                this.filterSeason(seasonName, visible);
-            };
-            this.#legendBody.appendChild(item);
-        });
+        const count = seasons.length;
+        const countEl = document.getElementById('seasonsCount');
+        if (countEl) countEl.textContent = count;
+    }
+
+    collapseLegend() {
+        document.getElementById('seasonsPanel')?.classList.remove('expanded');
+    }
+
+    setLegendState(open = true) {
+        const panel = document.getElementById('seasonsPanel');
+        if (panel) {
+            panel.classList.toggle('expanded', open);
+        }
     }
 }

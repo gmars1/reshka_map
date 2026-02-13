@@ -2,60 +2,107 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#ffffff">
     <title>Орёл и Решка — Интерактивная карта выпусков</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <link rel="stylesheet" href="src/style.css">
 </head>
 <body>
 
-    <main id="map" class="map-container"></main>
-
-    <div class="side-controls">
-        <section id="legend" class="legend collapsed">
-            <div id="legendHeader" class="legend-header">
-                <span id="legendTitle">Фильтр сезонов</span>
-                <button id="legendArrow" class="legend-arrow">
-                    <span class="arrow-icon">▾</span>
-                </button>
+    <div class="map-wrapper">
+        <main id="map" class="map-container"></main>
+        
+        <!-- Desktop: Top panels -->
+        <div class="top-panels" id="topPanels">
+            <div class="search-panel panel" id="searchPanel">
+                <div class="panel-header">
+                    <span class="panel-title">🔍</span>
+                    <input type="text" class="search-input" id="searchInput" placeholder="Поиск города..." autocomplete="off">
+                </div>
+                <div class="search-results" id="searchResults"></div>
             </div>
-            <div id="legendBody" class="legend-body" hidden></div>
-        </section>
-
-        <aside id="mainPanel" class="panel">
-            <header id="panelHeader" class="panel-header">
-                <span id="panelHeading">Панель уведомлений</span>
-                <button id="toggleBtn" class="panel-toggle">−</button>
-            </header>
-            <div id="panelBody" class="panel-body">
-                <div id="status" class="status-indicator">⏳ Загрузка данных…</div>
-                <div id="log" class="log-container"></div>
+            
+            <div class="seasons-panel panel" id="seasonsPanel">
+                <div class="panel-header" id="seasonsHeader">
+                    <span class="panel-title">Сезоны</span>
+                    <span class="panel-count" id="seasonsCount"></span>
+                    <span class="toggle-icon">▾</span>
+                </div>
+                <div class="panel-content" id="seasonsContent">
+                    <div class="seasons-controls">
+                        <button class="seasons-btn" data-action="showAll">Все</button>
+                        <button class="seasons-btn" data-action="hideAll">Сброс</button>
+                    </div>
+                    <div class="seasons-items" id="seasonsItems"></div>
+                </div>
             </div>
-        </aside>
+            
+            <div class="status-panel panel" id="statusPanel">
+                <div class="status-content" id="statusContent">
+                    <span class="status-icon">⏳</span>
+                    <span class="status-text" id="status">Загрузка…</span>
+                </div>
+                <div class="log-container" id="log"></div>
+            </div>
+        </div>
+        
+        <!-- Mobile: Bottom Sheet -->
+        <div class="bottom-sheet" id="bottomSheet">
+            <div class="bottom-sheet-tabs" id="bottomSheetTabs">
+                <button class="sheet-tab active" data-tab="search">🔍 Поиск</button>
+                <button class="sheet-tab" data-tab="seasons">Сезоны</button>
+                <button class="sheet-tab" data-tab="status">Статус</button>
+            </div>
+            <div class="bottom-sheet-content">
+                <div class="sheet-panel active" id="sheetSearch">
+                    <input type="text" class="sheet-search-input" id="sheetSearchInput" placeholder="Город или страна..." autocomplete="off">
+                    <div class="sheet-search-results" id="sheetSearchResults"></div>
+                </div>
+                <div class="sheet-panel" id="sheetSeasons">
+                    <div class="seasons-controls">
+                        <button class="seasons-btn" data-action="showAll">Все</button>
+                        <button class="seasons-btn" data-action="hideAll">Сброс</button>
+                    </div>
+                    <div class="seasons-items" id="sheetSeasonsItems"></div>
+                </div>
+                <div class="sheet-panel" id="sheetStatus">
+                    <div class="sheet-status-indicator" id="sheetStatusIndicator">⏳ Загрузка…</div>
+                    <div class="log-container" id="sheetLog"></div>
+                </div>
+            </div>
+            <div class="bottom-sheet-handle" id="bottomSheetHandle">
+                <div class="handle-bar"></div>
+            </div>
+        </div>
+        
+        <!-- License Button -->
+        <div class="license-container">
+            <button class="license-toggle" id="licenseToggle" aria-label="О проекте">
+                <span class="license-icon">ℹ</span>
+            </button>
+            <div class="license-expanded" id="licenseExpanded">
+                <div class="license-title">О проекте</div>
+                <div class="license-content">
+                    <div class="license-section">
+                        Данные: <a href="https://ru.wikipedia.org/wiki/Орёл_и_решка_(телепередача)" target="_blank" rel="noopener">Википедия</a>
+                        | Лицензия: <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.ru" target="_blank" rel="noopener">CC BY-SA 4.0</a>
+                    </div>
+                    <div class="license-section">
+                        Карта: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a><br>
+                        Геоданные: <a href="https://nominatim.openstreetmap.org/" target="_blank" rel="noopener noreferrer">Nominatim</a>
+                    </div>
+                    <div class="license-section">
+                        Данный ресурс является некоммерческим фан-проектом.<br>
+                        Все права на торговую марку «Орёл и Решка» принадлежат их законным владельцам. <br>
+                        Контент взят из открытых источников в ознакомительных целях.
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-
-
-    <footer id="mainFooter" class="license" role="contentinfo">
-        <div class="footer-section">
-            Использованы данные <a href="https://ru.wikipedia.org/wiki/Орёл_и_решка_(телепередача)" 
-            target="_blank" rel="noopener noreferrer">авторов Википедии</a><br>
-            Лицензия: 
-            <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.ru" target="_blank" rel="noopener noreferrer">
-                CC BY-SA 4.0
-            </a>
-        </div>
-
-        <div class="footer-section" style="margin-top:6px">
-            Карта: © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a><br>
-            Геоданные: <a href="https://nominatim.openstreetmap.org/" target="_blank" rel="noopener noreferrer">Nominatim</a>
-        </div>
-
-        <div class="footer-disclaimer" style="margin-top:6px; font-size:10px; opacity:.7">
-            Данный ресурс является некоммерческим фан-проектом. <br>
-            Все права на торговую марку, аудио и видеоматериалы «Орёл и Решка» принадлежат их законным владельцам. <br>
-            Контент взят из открытых источников в ознакомительных целях.
-        </div>
-    </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <script src="src/script.js" type="module"></script>
