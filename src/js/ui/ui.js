@@ -227,7 +227,7 @@ export class UIManager {
         }
 
         const maxResults = 15;
-        results.slice(0, maxResults).forEach(({ marker, data }) => {
+        results.forEach(({ marker, data }) => {
             this.#highlightMarker(marker);
             
             const item = document.createElement('div');
@@ -246,12 +246,12 @@ export class UIManager {
             container.appendChild(item);
         });
 
-        if (results.length > maxResults) {
-            const more = document.createElement('div');
-            more.className = 'search-no-results';
-            more.textContent = `и ещё ${results.length - maxResults} результатов`;
-            container.appendChild(more);
-        }
+        // if (results.length > maxResults) {
+        //     const more = document.createElement('div');
+        //     more.className = 'search-no-results';
+        //     more.textContent = `и ещё ${results.length - maxResults} результатов`;
+        //     container.appendChild(more);
+        // }
     }
 
     #highlightMarker(marker) {
